@@ -5,7 +5,7 @@ from google.genai import types
 
 app = Flask(__name__)
 
-# Inicialización segura del cliente leyendo explícitamente la clave de entorno
+# Inicialización segura del cliente con el SDK moderno
 api_key_val = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key_val)
 
@@ -58,6 +58,7 @@ HTML_TEMPLATE = """
             width: 100%;
             margin-top: 15px;
             margin-bottom: 15px;
+            border-collapse: collapse;
         }
         th, td {
             padding: 10px;
@@ -89,7 +90,7 @@ HTML_TEMPLATE = """
                 <!-- Tarjeta del Formulario -->
                 <div class="card p-4 p-md-5">
                     <h2 class="mb-3 text-dark fw-bold text-center">Laboratorio Automatizado de Áridos</h2>
-                    <p class="text-muted text-center mb-4">Sube una fotografía de alta resolución de tu muestra de arena o grava para ejecutar el ensayo granulométrico técnico.</p>
+                    <p class="text-muted text-center mb-4">Sube una fotografía de alta resolución de tu muestra de arena o grava para generar el ensayo granulométrico técnico y cuadro de tamices oficial.</p>
 
                     <form method="POST" enctype="multipart/form-data" onsubmit="mostrarCarga()">
                         <div class="mb-4">
@@ -98,7 +99,7 @@ HTML_TEMPLATE = """
                         </div>
                         <div class="d-grid">
                             <button type="submit" id="btnAnalizar" class="btn btn-custom btn-lg text-white">
-                                <i class="fas fa-microscope me-2"></i>Ejecutar Ensayo Técnico
+                                <i class="fas fa-microscope me-2"></i>Ejecutar Ensayo de Laboratorio
                             </button>
                         </div>
                     </form>
@@ -134,7 +135,7 @@ HTML_TEMPLATE = """
     <script>
         function mostrarCarga() {
             document.getElementById('btnAnalizar').disabled = true;
-            document.getElementById('btnAnalizar').innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Ensamblando Reporte...';
+            document.getElementById('btnAnalizar').innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Generando Reporte...';
             document.getElementById('loadingIndicator').style.display = 'block';
         }
     </script>
@@ -161,19 +162,21 @@ def index():
                 try:
                     image_bytes = file.read()
                     
+                    # Prompt ultra técnico enfocado estrictamente en normas de laboratorio para áridos
                     prompt = (
                         "Actúa con rigor absoluto como Ingeniero Geotécnico y Jefe de Control de Calidad de plantas de áridos (GRAVAFILT S.A.). "
-                        "Analiza con detalle la fotografía provista de la muestra de material (arena o grava). "
-                        "Tu informe debe estructurarse estrictamente de la siguiente forma:\n\n"
-                        "1. **Caracterización Fisotécnica:** Clasificación visual del árido, morfología de los cantos (angulosos, subredondeados), estimación de limpieza y presencia de impurezas o finos arcillosos.\n"
-                        "2. **Cuadro Granulométrico Oficial (Norma de Laboratorio):** "
-                        "Construye una tabla formateada en Markdown clara y detallada que contenga exactamente estas columnas:\n"
+                        "Analiza con extremo detalle técnico la fotografía provista de la muestra de material (arena o grava). "
+                        "Tu informe de laboratorio debe contener estrictamente lo siguiente:\n\n"
+                        "1. **Caracterización Fisotécnica:** Clasificación visual precisa del árido, morfología de las partículas (angulosas, subredondeadas, esfericidad), estimación de limpieza y ausencia o presencia de material limoso/arcilloso (finos).\n"
+                        "2. **Cuadro Granulométrico Oficial (Norma de Laboratorio IRAM / ASTM):** "
+                        "Construye una tabla formateada en Markdown clara y rigurosa que contenga exactamente estas columnas:\n"
                         "   | Tamiz / Malla | Abertura (mm) | % Retenido Parcial | % Retenido Acumulado | % Pasante Acumulado |\n"
                         "   Utiliza la serie estándar completa correspondiente al material analizado (ej: 9.5 mm, 4.75 mm, 2.36 mm, 1.18 mm, 0.600 mm, 0.300 mm, 0.150 mm, Fondo).\n"
-                        "3. **Parámetros Estadísticos:** Estimación técnica del Módulo de Finura (MF) y Tamaño Máximo Nominal (TMN).\n"
-                        "4. **Dictamen de Calidad:** Conclusión técnica sobre la aptitud del material para uso industrial, hormigones o sistemas de filtración, indicando los ajustes operativos necesarios en planta."
+                        "3. **Parámetros Estadísticos del Ensayo:** Estimación técnica del Módulo de Finura (MF) y Tamaño Máximo Nominal (TMN).\n"
+                        "4. **Dictamen de Calidad y Operativa:** Conclusión técnica formal sobre la aptitud del material para hormigones, construcción o filtración industrial, detallando las acciones correctivas o ajustes necesarios en la línea de clasificación de la planta."
                     )
 
+                    # Uso del modelo actual optimizado para el SDK moderno
                     response = client.models.generate_content(
                         model='gemini-2.5-flash',
                         contents=[
