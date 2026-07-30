@@ -1,13 +1,12 @@
 import os
 from flask import Flask, render_template_string, request
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 app = Flask(__name__)
 
-# Configuración de la API con la variable de entorno de Render
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+# Inicialización del cliente con el SDK moderno y la variable de entorno de Render
+client = genai.Client()
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -54,14 +53,19 @@ HTML_TEMPLATE = """
             margin-top: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.03);
         }
-        table.table-lab th {
+        table {
+            width: 100%;
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+        th {
             background-color: #212529;
             color: #ffffff;
-            text-align: center;
-        }
-        table.table-lab td {
-            text-align: center;
-            vertical-align: middle;
         }
     </style>
 </head>
@@ -83,33 +87,33 @@ HTML_TEMPLATE = """
                 
                 <!-- Tarjeta del Formulario -->
                 <div class="card p-4 p-md-5">
-                    <h2 class="mb-3 text-dark fw-bold text-center">Simulador de Ensayo Granulométrico por Visión Artificial</h2>
-                    <p class="text-muted text-center mb-4">Sube una fotografía técnica de la muestra de arena o grava para generar el reporte de laboratorio con cuadro de tamices, porcentajes retenidos y pasantes acumulados.</p>
+                    <h2 class="mb-3 text-dark fw-bold text-center">Laboratorio Automatizado de Áridos</h2>
+                    <p class="text-muted text-center mb-4">Sube una fotografía de alta resolución de tu muestra de arena o grava para ejecutar el ensayo granulométrico técnico.</p>
 
                     <form method="POST" enctype="multipart/form-data" onsubmit="mostrarCarga()">
                         <div class="mb-4">
-                            <label for="file" class="form-label fw-semibold text-secondary">Seleccionar imagen de la muestra de áridos:</label>
+                            <label for="file" class="form-label fw-semibold text-secondary">Seleccionar imagen de la muestra:</label>
                             <input class="form-control form-control-lg" type="file" id="file" name="file" accept="image/*" required>
                         </div>
                         <div class="d-grid">
                             <button type="submit" id="btnAnalizar" class="btn btn-custom btn-lg text-white">
-                                <i class="fas fa-microscope me-2"></i>Ejecutar Ensayo de Laboratorio
+                                <i class="fas fa-microscope me-2"></i>Ejecutar Ensayo Técnico
                             </button>
                         </div>
                     </form>
 
-                    <!-- Indicador de carga visual -->
+                    <!-- Indicador de carga -->
                     <div id="loadingIndicator" class="text-center mt-4" style="display: none;">
                         <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
                             <span class="visually-hidden">Procesando...</span>
                         </div>
-                        <p class="text-primary fw-semibold mt-2">Ejecutando análisis granulométrico y cálculo de mallas, por favor espere...</p>
+                        <p class="text-primary fw-semibold mt-2">Analizando granulometría y calculando curva de tamices con IA...</p>
                     </div>
 
                     <!-- Sección de Resultados -->
                     {% if resultado %}
                     <div class="result-box mt-4">
-                        <h4 class="text-dark fw-bold mb-3"><i class="fas fa-file-invoice text-success me-2"></i>Reporte Técnico de Laboratorio:</h4>
+                        <h4 class="text-dark fw-bold mb-3"><i class="fas fa-file-invoice text-success me-2"></i>Informe Técnico de Laboratorio:</h4>
                         <div class="text-secondary" style="white-space: pre-line; line-height: 1.6;">{{ resultado }}</div>
                     </div>
                     {% endif %}
@@ -129,7 +133,7 @@ HTML_TEMPLATE = """
     <script>
         function mostrarCarga() {
             document.getElementById('btnAnalizar').disabled = true;
-            document.getElementById('btnAnalizar').innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Calculando...';
+            document.getElementById('btnAnalizar').innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Ensamblando Reporte...';
             document.getElementById('loadingIndicator').style.display = 'block';
         }
     </script>
@@ -155,39 +159,36 @@ def index():
             else:
                 try:
                     image_bytes = file.read()
-                    image_part = {
-                        "mime_type": file.content_type,
-                        "data": image_bytes
-                    }
-
-                    # Modelo estable oficial
-                    model = genai.GenerativeModel('gemini-2.5-flash')
                     
-                    # Prompt altamente técnico enfocado en ingeniería y normativas de áridos
+                    # Prompt técnico enfocado estrictamente en estándares de laboratorio para áridos
                     prompt = (
-                        "Actúa rigurosamente como un Ingeniero Geotécnico y Jefe de Control de Calidad en planta de procesamiento de áridos (GRAVAFILT S.A.). "
-                        "Analiza con extrema precisión técnica la imagen provista de la muestra de áridos (arena/grava). "
-                        "Debes generar un informe de laboratorio formal que contenga estrictamente lo siguiente:\n\n"
-                        "1. **Identificación y Clasificación Geotécnica:** Tipo de árido (fino/grueso), forma de las partículas (angulosas, subangulosas, rodadas), estimación visual de limpieza y ausencia/presencia de material arcilloso o limoso (finos).\n"
-                        "2. **Cuadro de Análisis Granulométrico por Tamices (Norma IRAM / ASTM aplicable):** "
-                        "Construye una tabla formateada en Markdown que incluya las columnas:\n"
-                        "   - Tamiz / Malla (ej: 9.5 mm (3/8\"), 4.75 mm (N° 4), 2.36 mm (N° 8), 1.18 mm (N° 16), 0.600 mm (N° 30), 0.300 mm (N° 50), 0.150 mm (N° 100), Fondo)\n"
-                        "   - % Retenido Parcial (Estimación técnica basada en la granulometría visual)\n"
-                        "   - % Retenido Acumulado\n"
-                        "   - % Pasante Acumulado\n"
-                        "3. **Parámetros Estadísticos Derivados:** Estimación del Módulo de Finura (MF) y Tamaño Máximo Nominal (TMN).\n"
-                        "4. **Conclusión y Dictamen Técnico:** Dictamen sobre si la muestra cumple con los parámetros estándar para uso en construcción o filtración industrial, detallando observaciones correctivas para la línea de clasificación."
+                        "Actúa con rigor absoluto como Ingeniero Geotécnico y Jefe de Control de Calidad de plantas de áridos (GRAVAFILT S.A.). "
+                        "Analiza con detalle la fotografía provista de la muestra de material (arena o grava). "
+                        "Tu informe debe estructurarse estrictamente de la siguiente forma:\n\n"
+                        "1. **Caracterización Fisotécnica:** Clasificación visual del árido, morfología de los cantos (angulosos, subredondeados), estimación de limpieza y presencia de impurezas o finos arcillosos.\n"
+                        "2. **Cuadro Granulométrico Oficial (Norma de Laboratorio):** "
+                        "Construye una tabla formateada en Markdown clara y detallada que contenga exactamente estas columnas:\n"
+                        "   | Tamiz / Malla | Abertura (mm) | % Retenido Parcial | % Retenido Acumulado | % Pasante Acumulado |\n"
+                        "   Utiliza la serie estándar completa correspondiente al material analizado (ej: 9.5 mm, 4.75 mm, 2.36 mm, 1.18 mm, 0.600 mm, 0.300 mm, 0.150 mm, Fondo).\n"
+                        "3. **Parámetros Estadísticos:** Estimación técnica del Módulo de Finura (MF) y Tamaño Máximo Nominal (TMN).\n"
+                        "4. **Dictamen de Calidad:** Conclusión técnica sobre la aptitud del material para uso industrial, hormigones o sistemas de filtración, indicando los ajustes operativos necesarios en planta."
                     )
 
-                    response = model.generate_content([prompt, image_part])
+                    # Llamada moderna utilizando el SDK oficial y el modelo gemini-2.5-flash
+                    response = client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=[
+                            types.Part.from_bytes(
+                                data=image_bytes,
+                                mime_type=file.content_type,
+                            ),
+                            prompt
+                        ]
+                    )
                     resultado = response.text
 
                 except Exception as e:
-                    error_msg = str(e)
-                    if "429" in error_msg or "Quota exceeded" in error_msg:
-                        error = "Se ha superado temporalmente el límite de consultas gratuitas de la API. Por favor, aguarda unos segundos e intenta nuevamente."
-                    else:
-                        error = f"Ocurrió un error en el procesamiento técnico: {error_msg}"
+                    error = f"Ocurrió un error en el procesamiento técnico: {str(e)}"
 
     return render_template_string(HTML_TEMPLATE, resultado=resultado, error=error)
 
