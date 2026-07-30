@@ -1,5 +1,6 @@
 import os
-from flask import Flask, render_template_string, request, redirect, url_for
+import time
+from flask import Flask, render_template_string, request
 import google.generativeai as genai
 
 app = Flask(__name__)
@@ -9,7 +10,6 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
-# HTML + CSS completo con Bootstrap y diseño profesional
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="es">
@@ -78,17 +78,25 @@ HTML_TEMPLATE = """
                     <h2 class="mb-3 text-dark fw-bold text-center">Análisis de Muestras por Inteligencia Artificial</h2>
                     <p class="text-muted text-center mb-4">Sube una fotografía de la muestra de arena o grava para evaluar granulometría, forma y características visuales.</p>
 
-                    <form method="POST" enctype="multipart/form-data">
+                    <form method="POST" enctype="multipart/form-data" onsubmit="mostrarCarga()">
                         <div class="mb-4">
                             <label for="file" class="form-label fw-semibold text-secondary">Seleccionar imagen de la muestra:</label>
                             <input class="form-control form-control-lg" type="file" id="file" name="file" accept="image/*" required>
                         </div>
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-custom btn-lg text-white">
+                            <button type="submit" id="btnAnalizar" class="btn btn-custom btn-lg text-white">
                                 <i class="fas fa-microscope me-2"></i>Analizar Muestra
                             </button>
                         </div>
                     </form>
+
+                    <!-- Indicador de carga visual (Oculto por defecto) -->
+                    <div id="loadingIndicator" class="text-center mt-4" style="display: none;">
+                        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                            <span class="visually-hidden">Procesando...</span>
+                        </div>
+                        <p class="text-primary fw-semibold mt-2">Analizando muestra de áridos con Inteligencia Artificial, por favor espere...</p>
+                    </div>
 
                     <!-- Sección de Resultados -->
                     {% if resultado %}
@@ -108,6 +116,15 @@ HTML_TEMPLATE = """
             </div>
         </div>
     </div>
+
+    <!-- Script para mostrar animación al enviar -->
+    <script>
+        function mostrarCarga() {
+            document.getElementById('btnAnalizar').disabled = true;
+            document.getElementById('btnAnalizar').innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Procesando...';
+            document.getElementById('loadingIndicator').style.display = 'block';
+        }
+    </script>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -135,8 +152,8 @@ def index():
                         "data": image_bytes
                     }
 
-                    # Modelo actualizado y compatible con la API actual
-                    model = genai.GenerativeModel('gemini-3.5-flash')
+                    # Modelo estable de Gemini
+                    model = genai.GenerativeModel('gemini-2.5-flash')
                     
                     prompt = (
                         "Actúa como un experto en ingeniería de áridos, minería y control de calidad industrial. "
@@ -148,7 +165,11 @@ def index():
                     resultado = response.text
 
                 except Exception as e:
-                    error = f"Ocurrió un error al procesar la imagen con Gemini: {str(e)}"
+                    error_msg = str(e)
+                    if "429" in error_msg or "Quota exceeded" in error_msg:
+                        error = "Se ha superado temporalmente el límite de consultas gratuitas de la API. Por favor, aguarda unos 30 segundos e intenta nuevamente."
+                    else:
+                        error = f"Ocurrió un error al procesar la imagen: {error_msg}"
 
     return render_template_string(HTML_TEMPLATE, resultado=resultado, error=error)
 
