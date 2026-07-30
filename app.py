@@ -5,14 +5,6 @@ from google.genai import types
 
 app = Flask(__name__)
 
-client = None
-try:
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if api_key:
-        client = genai.Client(api_key=api_key)
-except Exception as e:
-    print(f"Error inicializando cliente: {e}")
-
 HTML_CONTENT = """<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -81,8 +73,12 @@ def index():
 @app.route('/analizar', methods=['POST'])
 def analizar():
     try:
-        if not client:
-            return jsonify({"status": "error", "message": "API Key no configurada en el entorno."}), 500
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            return jsonify({"status": "error", "message": "Falta configurar la variable de entorno GEMINI_API_KEY en Render."}), 500
+        
+        # Inicializar el cliente bajo demanda dentro de la ruta para evitar errores de arranque
+        client = genai.Client(api_key=api_key)
         
         mf = request.form.get('mf', 'No especificado')
         imagen = request.files.get('imagen')
