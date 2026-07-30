@@ -180,9 +180,9 @@ def index():
                         "4. **Dictamen de Calidad y Operativa:** Conclusión técnica formal sobre la aptitud del material para hormigones, construcción o filtración industrial, detallando las acciones correctivas o ajustes necesarios en la línea de clasificación de la planta."
                     )
 
-                    # Uso del modelo estable actual optimizado para el SDK moderno
+                    # Llamada utilizando el modelo actual y vigente en el SDK moderno
                     response = client.models.generate_content(
-                        model='gemini-2.5-flash',
+                        model='gemini-3.6-flash',
                         contents=[
                             types.Part.from_bytes(
                                 data=image_bytes,
