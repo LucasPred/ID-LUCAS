@@ -135,8 +135,8 @@ def index():
                         "data": image_bytes
                     }
 
-                    # Modelo activo y estable actualizados a gemini-1.5-flash
-                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    # Modelo actualizado y compatible con la API actual
+                    model = genai.GenerativeModel('gemini-2.5-flash')
                     
                     prompt = (
                         "Actúa como un experto en ingeniería de áridos, minería y control de calidad industrial. "
