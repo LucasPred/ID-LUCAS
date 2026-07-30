@@ -5,8 +5,9 @@ from google.genai import types
 
 app = Flask(__name__)
 
-# Inicialización del cliente con el SDK moderno y la variable de entorno de Render
-client = genai.Client()
+# Inicialización segura del cliente leyendo explícitamente la clave de entorno
+api_key_val = os.environ.get("GEMINI_API_KEY")
+client = genai.Client(api_key=api_key_val)
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -160,7 +161,6 @@ def index():
                 try:
                     image_bytes = file.read()
                     
-                    # Prompt técnico enfocado estrictamente en estándares de laboratorio para áridos
                     prompt = (
                         "Actúa con rigor absoluto como Ingeniero Geotécnico y Jefe de Control de Calidad de plantas de áridos (GRAVAFILT S.A.). "
                         "Analiza con detalle la fotografía provista de la muestra de material (arena o grava). "
@@ -174,7 +174,6 @@ def index():
                         "4. **Dictamen de Calidad:** Conclusión técnica sobre la aptitud del material para uso industrial, hormigones o sistemas de filtración, indicando los ajustes operativos necesarios en planta."
                     )
 
-                    # Llamada moderna utilizando el SDK oficial y el modelo gemini-2.5-flash
                     response = client.models.generate_content(
                         model='gemini-2.5-flash',
                         contents=[
