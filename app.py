@@ -136,7 +136,7 @@ def index():
                     }
 
                     # Modelo actualizado y compatible con la API actual
-                    model = genai.GenerativeModel('gemini-2.5-flash')
+                    model = genai.GenerativeModel('gemini-3.5-flash')
                     
                     prompt = (
                         "Actúa como un experto en ingeniería de áridos, minería y control de calidad industrial. "
