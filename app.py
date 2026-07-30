@@ -364,9 +364,9 @@ def index():
                         "4. **Dictamen Gerencial de Calidad:** Conclusión técnica formal sobre la aptitud del material para hormigones o filtración industrial, detallando el impacto financiero y los ajustes operativos en planta para la toma de decisiones de los accionistas."
                     )
 
-                    # Llamada utilizando el modelo estándar universalmente compatible
+                    # Utilizando el modelo activo y estable gemini-2.0-flash
                     response = client.models.generate_content(
-                        model='gemini-2.5-flash',
+                        model='gemini-2.0-flash',
                         contents=[
                             types.Part.from_bytes(
                                 data=image_bytes,
