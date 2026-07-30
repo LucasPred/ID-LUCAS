@@ -21,62 +21,66 @@ HTML_TEMPLATE = """
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body {
-            background-color: #f4f7f6;
+            background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .navbar-brand {
-            font-weight: 700;
-            letter-spacing: 0.5px;
+        .navbar {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
         }
         .card {
             border: none;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
         }
         .btn-custom {
-            background-color: #0d6efd;
-            border-color: #0d6efd;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            border: none;
             border-radius: 50px;
-            padding: 12px 30px;
+            padding: 14px 30px;
             font-weight: 600;
+            letter-spacing: 0.5px;
             transition: all 0.3s ease;
         }
         .btn-custom:hover {
-            background-color: #0b5ed7;
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(13, 110, 253, 0.3);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
         }
         .result-box {
             background-color: #ffffff;
-            border-left: 5px solid #0d6efd;
-            padding: 25px;
-            border-radius: 8px;
-            margin-top: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+            border-left: 6px solid #2563eb;
+            padding: 30px;
+            border-radius: 12px;
+            margin-top: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
         }
         table {
             width: 100%;
-            margin-top: 15px;
-            margin-bottom: 15px;
+            margin-top: 20px;
+            margin-bottom: 20px;
             border-collapse: collapse;
         }
         th, td {
-            padding: 10px;
+            padding: 12px 15px;
             text-align: center;
-            border: 1px solid #dee2e6;
+            border: 1px solid #e2e8f0;
         }
         th {
-            background-color: #212529;
+            background-color: #1e293b;
             color: #ffffff;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background-color: #f8fafc;
         }
     </style>
 </head>
 <body>
 
     <!-- Barra de Navegación -->
-    <nav class="navbar navbar-dark bg-dark shadow-sm py-3">
+    <nav class="navbar navbar-dark shadow-sm py-3">
         <div class="container">
-            <a class="navbar-brand" href="/">
+            <a class="navbar-brand fw-bold" href="/">
                 <i class="fas fa-flask me-2 text-warning"></i>GRAVAFILT S.A. | Control de Calidad y Granulometría
             </a>
         </div>
@@ -90,7 +94,7 @@ HTML_TEMPLATE = """
                 <!-- Tarjeta del Formulario -->
                 <div class="card p-4 p-md-5">
                     <h2 class="mb-3 text-dark fw-bold text-center">Laboratorio Automatizado de Áridos</h2>
-                    <p class="text-muted text-center mb-4">Sube una fotografía de alta resolución de tu muestra de arena o grava para generar el ensayo granulométrico técnico y cuadro de tamices oficial.</p>
+                    <p class="text-muted text-center mb-4">Sube una fotografía de alta resolución de tu muestra de arena o grava para generar de manera instantánea el ensayo granulométrico técnico y cuadro oficial de tamices.</p>
 
                     <form method="POST" enctype="multipart/form-data" onsubmit="mostrarCarga()">
                         <div class="mb-4">
@@ -116,7 +120,7 @@ HTML_TEMPLATE = """
                     {% if resultado %}
                     <div class="result-box mt-4">
                         <h4 class="text-dark fw-bold mb-3"><i class="fas fa-file-invoice text-success me-2"></i>Informe Técnico de Laboratorio:</h4>
-                        <div class="text-secondary" style="white-space: pre-line; line-height: 1.6;">{{ resultado }}</div>
+                        <div class="text-secondary" style="white-space: pre-line; line-height: 1.7;">{{ resultado }}</div>
                     </div>
                     {% endif %}
 
@@ -176,7 +180,7 @@ def index():
                         "4. **Dictamen de Calidad y Operativa:** Conclusión técnica formal sobre la aptitud del material para hormigones, construcción o filtración industrial, detallando las acciones correctivas o ajustes necesarios en la línea de clasificación de la planta."
                     )
 
-                    # Uso del modelo actual optimizado para el SDK moderno
+                    # Uso del modelo estable actual optimizado para el SDK moderno
                     response = client.models.generate_content(
                         model='gemini-2.5-flash',
                         contents=[
