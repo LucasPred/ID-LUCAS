@@ -15,7 +15,7 @@ HTML_TEMPLATE = """
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name-="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulador de Análisis Granulométrico - GRAVAFILT</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -38,7 +38,7 @@ HTML_TEMPLATE = """
             background-color: #0d6efd;
             border-color: #0d6efd;
             border-radius: 50px;
-            padding: 10px 25px;
+            padding: 12px 30px;
             font-weight: 600;
             transition: all 0.3s ease;
         }
@@ -135,7 +135,7 @@ def index():
                         "data": image_bytes
                     }
 
-                    # Configuración del modelo activo y estable
+                    # Modelo activo y estable para procesamiento multimodal
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     
                     prompt = (
@@ -148,7 +148,7 @@ def index():
                     resultado = response.text
 
                 except Exception as e:
-                    error = f"Ocurrió un error al procesar la imagen con Gemini: {str.e}"
+                    error = f"Ocurrió un error al procesar la imagen con Gemini: {str(e)}"
 
     return render_template_string(HTML_TEMPLATE, resultado=resultado, error=error)
 
