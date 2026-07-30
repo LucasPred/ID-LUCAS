@@ -152,7 +152,7 @@ def index():
                         "data": image_bytes
                     }
 
-                    # Uso del modelo estable oficial gemini-2.5-flash
+                    # Uso del modelo estable oficial
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     
                     prompt = (
@@ -167,7 +167,7 @@ def index():
                 except Exception as e:
                     error_msg = str(e)
                     if "429" in error_msg or "Quota exceeded" in error_msg:
-                        error = "Se ha superado temporalmente el límite de consultas gratuitas de la API. Por favor, aguarda unos 30 segundos e intenta nuevamente."
+                        error = "Se ha superado temporalmente el límite de consultas gratuitas de la API. Por favor, aguarda unos segundos e intenta nuevamente."
                     else:
                         error = f"Ocurrió un error al procesar la imagen: {error_msg}"
 
