@@ -6,7 +6,7 @@ from google.genai import types
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "gravafilt_secret_key_2026_secure")
 
-# Inicialización segura del cliente con el SDK moderno y el modelo estable vigente
+# Inicialización segura del cliente con el SDK moderno
 api_key_val = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key_val)
 
@@ -351,7 +351,6 @@ def index():
                 try:
                     image_bytes = file.read()
                     
-                    # Prompt gerencial y técnico ultra riguroso
                     prompt = (
                         "Actúa con rigor absoluto como Ingeniero Geotécnico Senior y Director de Control de Calidad de GRAVAFILT S.A. "
                         "Analiza con extremo detalle técnico la fotografía provista de la muestra de árido (arena o grava). "
@@ -365,6 +364,7 @@ def index():
                         "4. **Dictamen Gerencial de Calidad:** Conclusión técnica formal sobre la aptitud del material para hormigones o filtración industrial, detallando el impacto financiero y los ajustes operativos en planta para la toma de decisiones de los accionistas."
                     )
 
+                    # Llamada utilizando el modelo estándar universalmente compatible
                     response = client.models.generate_content(
                         model='gemini-2.5-flash',
                         contents=[
