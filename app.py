@@ -188,7 +188,7 @@ HTML_TEMPLATE = """
                             <div id="loadingOverlay">
                                 <div class="spinner-border text-primary mb-3" role="status" style="width: 3.5rem; height: 3.5rem;"></div>
                                 <h5 class="text-dark fw-bold">Procesando informe geológico institucional...</h5>
-                                <p class="text-muted small text-center px-3">Gemini IA está generando las tablas normativas IRAM/ASTM de forma segura. Por favor, aguarde.</p>
+                                <p class="text-muted small text-center px-3">Gemini IA está generando las tablas normativas IRAM/ASTM de forma segura. Si el servidor se satura, reintentará automáticamente.</p>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
@@ -204,7 +204,7 @@ HTML_TEMPLATE = """
                                         Seleccionar Archivo o Capturar con Cámara:
                                     </label>
                                     <input class="form-control form-control-lg mx-auto" type="file" id="fileInput" accept="image/*" capture="environment" required style="max-width: 500px;">
-                                    <div class="form-text text-muted mt-2">Formatos admitidos: JPG, PNG, WEBP. (Se optimiza automáticamente).</div>
+                                    <div class="form-text text-muted mt-2">Formatos admitidos: JPG, PNG, WEBP (Optimización automática integrada).</div>
                                 </div>
                                 <div class="d-grid">
                                     <button type="submit" id="btnAnalizar" class="btn btn-custom btn-lg text-white">
@@ -296,7 +296,7 @@ HTML_TEMPLATE = """
         </div>
     </div>
 
-    <!-- Script AJAX ultra robusto con compresión de imagen y lectura de texto plano ante errores de servidor -->
+    <!-- Script AJAX robusto con control de errores detallado -->
     <script>
         function enviarAsync(event) {
             event.preventDefault();
@@ -316,7 +316,7 @@ HTML_TEMPLATE = """
                     const canvas = document.createElement('canvas');
                     let width = img.width;
                     let height = img.height;
-                    const MAX_DIM = 900; // Máximo optimizado para evitar timeouts en servidores cloud
+                    const MAX_DIM = 900;
                     if (width > height && width > MAX_DIM) {
                         height *= MAX_DIM / width;
                         width = MAX_DIM;
@@ -340,10 +340,9 @@ HTML_TEMPLATE = """
                         const textData = await response.text();
                         try {
                             const jsonData = JSON.parse(textData);
-                            return { ok: response.ok, status: response.status, data: jsonData };
+                            return { ok: response.ok, data: jsonData };
                         } catch (parseErr) {
-                            // Si el servidor devolvió HTML (ej. Error 502 Bad Gateway o 504 Gateway Timeout)
-                            throw new Error("El servidor web interrumpió la conexión o superó el tiempo de espera (Timeout/502). Detalle: " + textData.substring(0, 120));
+                            throw new Error("El servidor interrumpió la conexión o excedió el tiempo límite (Timeout/502). Detalle: " + textData.substring(0, 100));
                         }
                     })
                     .then(resObj => {
@@ -469,23 +468,23 @@ def analizar_ajax():
             "6. **Dictamen de Calidad, Operativa y Uso Industrial:** Conclusión formal del Directorio sobre su aplicación en hormigones, construcción o filtración, incluyendo sugerencias de ajuste en planta."
         )
 
-        # Sistema de reintentos automáticos (Backoff) ante picos de demanda 503
-        max_intentos = 3
-        reintentos_delay = 2
+        # Mecanismo de reintentos automáticos (Backoff exponencial) ante errores 503 / UNAVAILABLE
+        max_intentos = 4
+        reintentos_delay = 3
         response = None
 
         for intento in range(max_intentos):
             try:
                 response = client.models.generate_content(
-                    model='gemini-3.5-flash',
+                    model='gemini-3.6-flash',
                     contents=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"), prompt]
                 )
                 break
             except Exception as api_err:
                 err_str = str(api_err)
-                if ("503" in err_str or "UNAVAILABLE" in err_str) and intento < max_intentos - 1:
+                if ("503" in err_str or "UNAVAILABLE" in err_str or "overloaded" in err_str) and intento < max_intentos - 1:
                     time.sleep(reintentos_delay)
-                    reintentos_delay *= 2
+                    reintentos_delay *= 2  # Duplica el tiempo de espera progresivamente
                     continue
                 else:
                     raise api_err
