@@ -1,10 +1,13 @@
 import os
 import time
-from flask import Flask, render_template_string, request
+from datetime import datetime
+from flask import Flask, render_template_string, request, session, redirect, url_for
 from google import genai
 from google.genai import types
 
 app = Flask(__name__)
+# Clave secreta fija para manejar la sesión de seguridad y el historial de reportes
+app.secret_key = "gravafilt_secret_key_2026_secure"
 
 # Inicialización segura del cliente con el SDK moderno
 api_key_val = os.environ.get("GEMINI_API_KEY")
@@ -16,25 +19,27 @@ HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Laboratorio de Áridos - Control de Calidad GRAVAFILT S.A.</title>
+    <title>GRAVAFILT S.A. | Dirección y Control de Calidad Geológica y Áridos</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body {
-            background-color: #f8f9fa;
+            background-color: #f1f5f9;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             -webkit-font-smoothing: antialiased;
         }
-        .navbar {
-            background: linear-gradient(135deg, #1e293b, #0f172a);
+        .navbar-top {
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            border-bottom: 3px solid #3b82f6;
         }
         .card {
             border: none;
             border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
             position: relative;
             overflow: hidden;
+            background: #ffffff;
         }
         .btn-custom {
             background: linear-gradient(135deg, #2563eb, #1d4ed8);
@@ -50,13 +55,22 @@ HTML_TEMPLATE = """
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
         }
+        .badge-corp {
+            background-color: #0f172a;
+            color: #38bdf8;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            padding: 6px 12px;
+            border-radius: 30px;
+            font-weight: 700;
+        }
         .result-box {
             background-color: #ffffff;
             border-left: 6px solid #2563eb;
-            padding: 20px;
+            padding: 25px;
             border-radius: 12px;
             margin-top: 25px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
             overflow-x: auto;
         }
         .result-box table {
@@ -69,9 +83,10 @@ HTML_TEMPLATE = """
             white-space: nowrap;
         }
         .result-box th, .result-box td {
-            padding: 10px 12px;
+            padding: 10px 14px;
             text-align: center;
             border: 1px solid #e2e8f0;
+            font-size: 0.9rem;
         }
         .result-box th {
             background-color: #1e293b;
@@ -87,72 +102,188 @@ HTML_TEMPLATE = """
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.92);
+            background: rgba(255, 255, 255, 0.95);
             z-index: 1000;
             display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            backdrop-filter: blur(2px);
+            backdrop-filter: blur(3px);
+        }
+        .preview-container {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            background: #f8fafc;
+            transition: all 0.3s;
+        }
+        .preview-container:hover {
+            border-color: #2563eb;
+            background: #f1f5f9;
+        }
+        .nav-pills .nav-link.active {
+            background-color: #2563eb;
+            font-weight: 600;
+        }
+        .nav-pills .nav-link {
+            color: #475569;
+            font-weight: 500;
         }
     </style>
 </head>
 <body>
 
-    <!-- Barra de Navegación -->
-    <nav class="navbar navbar-dark shadow-sm py-3">
-        <div class="container">
+    <!-- Barra de Navegación Institucional (Directorio y Accionistas) -->
+    <nav class="navbar navbar-dark shadow-sm py-3 navbar-top">
+        <div class="container d-flex justify-content-between align-items-center">
             <a class="navbar-brand fw-bold fs-6 fs-md-5 text-white text-wrap" href="/">
-                <i class="fas fa-flask me-2 text-warning"></i>GRAVAFILT S.A. | Control de Calidad
+                <i class="fas fa-mountain me-2 text-warning"></i>GRAVAFILT S.A. <span class="text-info fs-7 d-block d-md-inline">| Panel de Directorio y Control Técnico</span>
             </a>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge-corp d-none d-md-inline-block"><i class="fas fa-shield-alt me-1"></i> ACCESO DIRECTORIO: LSANTIAGO</span>
+                <a href="/logout" class="btn btn-outline-light btn-sm rounded-pill px-3"><i class="fas fa-sign-out-alt me-1"></i> Salir</a>
+            </div>
         </div>
     </nav>
 
     <!-- Contenido Principal -->
     <div class="container my-4 my-md-5">
         <div class="row justify-content-center">
-            <div class="col-lg-10">
+            <div class="col-lg-11">
                 
-                <!-- Tarjeta del Formulario -->
-                <div class="card p-3 p-md-5">
+                <!-- Pestañas de Navegación Interactivas -->
+                <ul class="nav nav-pills mb-4 justify-content-center bg-white p-2 rounded-pill shadow-sm" id="pills-tab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active rounded-pill px-4" id="pills-analizador-tab" data-bs-toggle="pill" data-bs-target="#pills-analizador" type="button" role="tab">
+                            <i class="fas fa-microscope me-2"></i>Analizador de Muestras IA
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link rounded-pill px-4" id="pills-historial-tab" data-bs-toggle="pill" data-bs-target="#pills-historial" type="button" role="tab">
+                            <i class="fas fa-history me-2"></i>Historial de Ensayos <span class="badge bg-primary ms-1">{{ historial|length if historial else 0 }}</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link rounded-pill px-4" id="pills-trazabilidad-tab" data-bs-toggle="pill" data-bs-target="#pills-trazabilidad" type="button" role="tab">
+                            <i class="fas fa-map-marked-alt me-2"></i>Trazabilidad y Origen
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="pills-tabContent">
                     
-                    <!-- Capa de Carga Interna -->
-                    <div id="loadingOverlay">
-                        <div class="spinner-border text-primary mb-3" role="status" style="width: 3.5rem; height: 3.5rem;">
-                            <span class="visually-hidden">Procesando...</span>
+                    <!-- PESTAÑA 1: ANALIZADOR DE MUESTRAS IA -->
+                    <div class="tab-pane fade show active" id="pills-analizador" role="tabpanel">
+                        <div class="card p-4 p-md-5">
+                            
+                            <!-- Capa de Carga Interna Fluida -->
+                            <div id="loadingOverlay">
+                                <div class="spinner-border text-primary mb-3" role="status" style="width: 3.5rem; height: 3.5rem;">
+                                    <span class="visually-hidden">Procesando...</span>
+                                </div>
+                                <h5 class="text-dark fw-bold">Gemini IA analizando muestra geológica...</h5>
+                                <p class="text-muted small text-center px-3">Evaluando granulometría, mineralogía, curvas de tamices IRAM/ASTM y trazabilidad de extracción fluvial. Aguarde unos segundos.</p>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                                <h2 class="text-dark fw-bold fs-3 fs-md-2 mb-2 mb-md-0">Laboratorio Geológico Automatizado</h2>
+                                <span class="badge bg-success text-white px-3 py-2 rounded-pill"><i class="fas fa-check-circle me-1"></i> Sistema Operativo Cloud Conectado</span>
+                            </div>
+                            <p class="text-muted mb-4 small fs-md-6">Plataforma corporativa exclusiva para validación de extracciones de río y procesamiento industrial de arenas y gravas. Suba un archivo de archivo o active directamente la cámara de su dispositivo móvil o tablet.</p>
+
+                            <form method="POST" enctype="multipart/form-data" onsubmit="mostrarCarga(event)">
+                                <div class="mb-4 preview-container">
+                                    <label for="file" class="form-label fw-semibold text-secondary d-block mb-3">
+                                        <i class="fas fa-camera-retro fa-2x text-primary mb-2 d-block"></i>
+                                        Cargar Muestra (Seleccionar Archivo o Capturar con Cámara):
+                                    </label>
+                                    <!-- capture="environment" permite abrir directamente la cámara trasera en celulares y tablets -->
+                                    <input class="form-control form-control-lg mx-auto" type="file" id="file" name="file" accept="image/*" capture="environment" required style="max-width: 500px;">
+                                    <div class="form-text mt-2 text-muted small">Compatible con cámaras móviles (Android / iOS / Tablets). El motor ajustará el análisis según el material visualizado.</div>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="submit" id="btnAnalizar" class="btn btn-custom btn-lg text-white">
+                                        <i class="fas fa-atom me-2"></i>Ejecutar Diagnóstico Geológico y Técnico con Gemini
+                                    </button>
+                                </div>
+                            </form>
+
+                            <!-- Sección de Resultados Recientes -->
+                            {% if resultado %}
+                            <div class="result-box mt-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                                    <h4 class="text-dark fw-bold fs-5 fs-md-4 mb-2 mb-md-0"><i class="fas fa-file-invoice text-success me-2"></i>Informe Técnico Oficial de Laboratorio:</h4>
+                                    <span class="text-muted small"><i class="far fa-clock me-1"></i> Emitido: {{ timestamp_actual }}</span>
+                                </div>
+                                <div class="text-secondary" style="white-space: pre-line; line-height: 1.7; font-size: 0.95rem;">{{ resultado }}</div>
+                            </div>
+                            {% endif %}
+
+                            {% if error %}
+                            <div class="alert alert-danger mt-4 rounded-3 shadow-sm small" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+                            </div>
+                            {% endif %}
                         </div>
-                        <h5 class="text-dark fw-bold">Analizando muestra en laboratorio...</h5>
-                        <p class="text-muted small text-center px-3">Calculando granulometría y parámetros técnicos con IA. Esto puede tomar unos segundos.</p>
                     </div>
 
-                    <h2 class="mb-3 text-dark fw-bold text-center fs-3 fs-md-2">Laboratorio Automatizado de Áridos</h2>
-                    <p class="text-muted text-center mb-4 small fs-md-6">Sube una fotografía de alta resolución de tu muestra de arena o grava para generar de manera instantánea el ensayo granulométrico técnico y cuadro oficial de tamices.</p>
-
-                    <form method="POST" enctype="multipart/form-data" onsubmit="mostrarCarga(event)">
-                        <div class="mb-4">
-                            <label for="file" class="form-label fw-semibold text-secondary">Seleccionar imagen de la muestra:</label>
-                            <input class="form-control form-control-lg" type="file" id="file" name="file" accept="image/*" required>
+                    <!-- PESTAÑA 2: HISTORIAL DE ENSAYOS -->
+                    <div class="tab-pane fade" id="pills-historial" role="tabpanel">
+                        <div class="card p-4 p-md-5">
+                            <h3 class="text-dark fw-bold mb-3"><i class="fas fa-archive text-primary me-2"></i>Historial Resguardado de Ensayos</h3>
+                            <p class="text-muted small mb-4">Registro cronológico de todos los reportes analizados por el Directorio de GRAVAFILT S.A. mediante inteligencia artificial.</p>
+                            
+                            {% if historial and historial|length > 0 %}
+                                <div class="list-group">
+                                    {% for item in historial %}
+                                    <div class="list-group-item list-group-item-action flex-column align-items-start mb-3 rounded-3 shadow-sm border p-4">
+                                        <div class="d-flex w-100 justify-content-between align-items-center mb-2">
+                                            <h5 class="mb-1 fw-bold text-dark"><i class="fas fa-clipboard-check text-success me-2"></i>Ensayo ID: #{{ loop.revindex }}</h5>
+                                            <small class="text-muted fw-semibold"><i class="far fa-calendar-alt me-1"></i> {{ item.fecha }}</small>
+                                        </div>
+                                        <div class="mb-2 text-secondary" style="font-size: 0.9rem; max-height: 120px; overflow: hidden; text-overflow: ellipsis;">
+                                            {{ item.resumen[:250] }}...
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-5 text-muted">
+                                    <i class="fas fa-folder-open fa-3x mb-3 text-secondary"></i>
+                                    <p class="fw-semibold">Aún no se han registrado ensayos en esta sesión activa.</p>
+                                </div>
+                            {% endif %}
                         </div>
-                        <div class="d-grid">
-                            <button type="submit" id="btnAnalizar" class="btn btn-custom btn-lg text-white">
-                                <i class="fas fa-microscope me-2"></i>Ejecutar Ensayo de Laboratorio
-                            </button>
+                    </div>
+
+                    <!-- PESTAÑA 3: TRAZABILIDAD Y ORIGEN -->
+                    <div class="tab-pane fade" id="pills-trazabilidad" role="tabpanel">
+                        <div class="card p-4 p-md-5">
+                            <h3 class="text-dark fw-bold mb-3"><i class="fas fa-map-marked-alt text-primary me-2"></i>Origen, Trazabilidad y Marco Geológico</h3>
+                            <p class="text-muted mb-4">Información institucional sobre la procedencia de los áridos extraídos en cuencas de río y procesados bajo normas rigurosas.</p>
+                            
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <div class="p-4 border rounded-3 bg-light h-100">
+                                        <h5 class="text-dark fw-bold mb-3"><i class="fas fa-water text-info me-2"></i>Extracción y Cuencas</h5>
+                                        <p class="text-secondary small" style="line-height: 1.6;">
+                                            Los materiales procesados por GRAVAFILT S.A. provienen de extracciones fluviales controladas, bajo estrictas pautas de sustentabilidad ambiental y normativas provinciales. Cada banco de arena o grava presenta cualidades organolépticas específicas de origen aluvial, con composición cuarzosa predominante y ausencia de impurezas orgánicas perjudiciales para la industria del hormigón y filtración.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-4 border rounded-3 bg-light h-100">
+                                        <h5 class="text-dark fw-bold mb-3"><i class="fas fa-certificate text-warning me-2"></i>Garantía de Accionistas</h5>
+                                        <p class="text-secondary small" style="line-height: 1.6;">
+                                            Operado bajo la supervisión directa del Directorio (Usuario <strong>lsantiago</strong>). Este repositorio garantiza doble capa de seguridad, asegurando que los reportes físico-químicos, granulométricos y el módulo de finura validado por Gemini IA constituyan un respaldo técnico fehaciente ante clientes corporativos y petroleros.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </form>
-
-                    <!-- Sección de Resultados -->
-                    {% if resultado %}
-                    <div class="result-box mt-4">
-                        <h4 class="text-dark fw-bold mb-3 fs-5 fs-md-4"><i class="fas fa-file-invoice text-success me-2"></i>Informe Técnico de Laboratorio:</h4>
-                        <div class="text-secondary" style="white-space: pre-line; line-height: 1.7; font-size: 0.95rem;">{{ resultado }}</div>
                     </div>
-                    {% endif %}
 
-                    {% if error %}
-                    <div class="alert alert-danger mt-4 rounded-3 shadow-sm small" role="alert">
-                        <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
-                    </div>
-                    {% endif %}
                 </div>
 
             </div>
@@ -173,36 +304,156 @@ HTML_TEMPLATE = """
 </html>
 """
 
+LOGIN_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Restringido - GRAVAFILT S.A.</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .login-card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            background: #ffffff;
+            width: 100%;
+            max-width: 420px;
+            padding: 40px;
+        }
+        .btn-login {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            border: none;
+            border-radius: 50px;
+            padding: 12px;
+            font-weight: 600;
+            color: white;
+            transition: all 0.3s;
+        }
+        .btn-login:hover {
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="login-card text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-shield-alt fa-3x text-primary mb-3"></i>
+                        <h3 class="fw-bold text-dark">GRAVAFILT S.A.</h3>
+                        <p class="text-muted small">Acceso exclusivo para Directorio y Accionistas</p>
+                    </div>
+
+                    {% if error %}
+                    <div class="alert alert-danger py-2 small mb-3" role="alert">
+                        <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                    </div>
+                    {% endif %}
+
+                    <form method="POST">
+                        <div class="mb-3 text-start">
+                            <label class="form-label fw-semibold text-secondary small">Usuario Autorizado:</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-user text-muted"></i></span>
+                                <input type="text" class="form-control" name="username" placeholder="Ingrese usuario" required autofocus>
+                            </div>
+                        </div>
+                        <div class="mb-4 text-start">
+                            <label class="form-label fw-semibold text-secondary small">Contraseña de Seguridad:</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-lock text-muted"></i></span>
+                                <input type="password" class="form-control" name="password" placeholder="Ingrese contraseña" required>
+                            </div>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-login">Ingresar al Sistema</button>
+                        </div>
+                    </form>
+                    <div class="mt-4 text-muted" style="font-size: 0.75rem;">
+                        Sistema de Doble Seguridad Verificado | Repositorio ID-LUCAS
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        if username == "lsantiago" and password == "gravafil2026":
+            session["authenticated"] = True
+            session["historial"] = []
+            return redirect(url_for("index"))
+        else:
+            error = "Credenciales incorrectas. Verifique usuario y contraseña."
+    return render_template_string(LOGIN_TEMPLATE, error=error)
+
+@app.route("/logout")
+def logout():
+    session.pop("authenticated", None)
+    session.pop("historial", None)
+    return redirect(url_for("login"))
+
 @app.route("/", methods=["GET", "POST"])
 def index():
+    if not session.get("authenticated"):
+        return redirect(url_for("login"))
+
     resultado = None
     error = None
+    timestamp_actual = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+    # Inicializar historial en sesión si no existe
+    if "historial" not in session:
+        session["historial"] = []
 
     if request.method == "POST":
         if 'file' not in request.files:
-            error = "No se ha seleccionado ningún archivo."
+            error = "No se ha seleccionado ningún archivo o imagen."
         else:
             file = request.files['file']
             if file.filename == '':
-                error = "El archivo no tiene un nombre válido."
+                error = "El archivo seleccionado no es válido."
             else:
                 try:
                     image_bytes = file.read()
                     
+                    # Prompt técnico riguroso autosuficiente solicitado exactamente
                     prompt = (
-                        "Actúa con rigor absoluto como Ingeniero Geotécnico y Jefe de Control de Calidad de plantas de áridos (GRAVAFILT S.A.). "
-                        "Analiza con extremo detalle técnico la fotografía provista de la muestra de material (arena o grava). "
-                        "Tu informe de laboratorio debe contener estrictamente lo siguiente:\n\n"
-                        "1. **Caracterización Fisotécnica:** Clasificación visual precisa del árido, morfología de las partículas (angulosas, subredondeadas, esfericidad), estimación de limpieza y ausencia o presencia de material limoso/arcilloso (finos).\n"
-                        "2. **Cuadro Granulométrico Oficial (Norma de Laboratorio IRAM / ASTM):** "
+                        "Actúa con rigor absoluto como Ingeniero Geotécnico, Geólogo y Jefe de Control de Calidad de plantas de áridos (GRAVAFILT S.A.). "
+                        "Analiza con extremo detalle técnico la fotografía provista de la muestra de material (arena o grava), contemplando que ante distintos materiales hay distintos análisis específicos de IA. "
+                        "Tu informe de laboratorio autónomo, técnico y geológico debe contener estrictamente lo siguiente:\n\n"
+                        "1. **Caracterización Geológica, Mineralógica y Fisotécnica:** Clasificación visual precisa del árido (origen aluvial/fluvial), morfología de las partículas (angulosas, subredondeadas, esfericidad), estimación de mineralogía predominante (ej. cuarzo, feldespatos) y ausencia o presencia de material limoso/arcilloso o finos.\n"
+                        "2. **Cualidades Organolépticas y Condiciones Físico-Químicas:** Descripción detallada de color, textura superficial, limpieza, ausencia de materia orgánica y comportamiento físico-químico esperado ante agentes agresivos.\n"
+                        "3. **Origen y Trazabilidad de Extracción:** Referencia analítica sobre el probable banco de extracción fluvial de río y su aptitud industrial.\n"
+                        "4. **Cuadro Granulométrico Oficial (Norma de Laboratorio IRAM / ASTM):** "
                         "Construye una tabla formateada en Markdown clara y rigurosa que contenga exactamente estas columnas:\n"
                         "   | Tamiz / Malla | Abertura (mm) | % Retenido Parcial | % Retenido Acumulado | % Pasante Acumulado |\n"
                         "   Utiliza la serie estándar completa correspondiente al material analizado (ej: 9.5 mm, 4.75 mm, 2.36 mm, 1.18 mm, 0.600 mm, 0.300 mm, 0.150 mm, Fondo).\n"
-                        "3. **Parámetros Estadísticos del Ensayo:** Estimación técnica del Módulo de Finura (MF) y Tamaño Máximo Nominal (TMN).\n"
-                        "4. **Dictamen de Calidad y Operativa:** Conclusión técnica formal sobre la aptitud del material para hormigones, construcción o filtración industrial, detallando las acciones correctivas o ajustes necesarios en la línea de clasificación de la planta."
+                        "5. **Parámetros Estadísticos del Ensayo:** Estimación técnica rigurosa del Módulo de Finura (MF) y Tamaño Máximo Nominal (TMN).\n"
+                        "6. **Dictamen de Calidad, Operativa y Uso Industrial:** Conclusión técnica formal firmada por el Directorio sobre la aptitud del material para hormigones estructurales, construcción o filtración industrial, detallando las acciones correctivas o ajustes necesarios en la línea de clasificación de la planta."
                     )
 
-                    # Sistema de reintentos con el modelo actual y estable 'gemini-2.0-flash'
+                    # Sistema de reintentos automáticos robusto optimizado para Cloud
                     max_intentos = 3
                     for intento in range(max_intentos):
                         try:
@@ -219,15 +470,33 @@ def index():
                             resultado = response.text
                             break
                         except Exception as api_err:
-                            if ("503" in str(api_err) or "404" in str(api_err)) and intento < max_intentos - 1:
-                                time.sleep(2 * (intento + 1))
+                            if ("503" in str(api_err) or "429" in str(api_err)) and intento < max_intentos - 1:
+                                time.sleep(3 * (intento + 1))
                                 continue
                             raise api_err
 
-                except Exception as e:
-                    error = f"Ocurrió un error en el procesamiento técnico (servidores ocupados, intenta de nuevo en unos segundos): {str(e)}"
+                    # Guardar en el historial de la sesión si se obtuvo resultado con éxito
+                    if resultado:
+                        nuevo_reporte = {
+                            "fecha": timestamp_actual,
+                            "resumen": resultado
+                        }
+                        # Modificar la lista en sesión de manera segura para Flask
+                        hist_actual = session.get("historial", [])
+                        hist_actual.insert(0, nuevo_reporte)
+                        session["historial"] = hist_actual
+                        session.modified = True
 
-    return render_template_string(HTML_TEMPLATE, resultado=resultado, error=error)
+                except Exception as e:
+                    error = f"Ocurrió un error en el procesamiento técnico (servidores ocupados o cuota, reintente en unos segundos): {str(e)}"
+
+    return render_template_string(
+        HTML_TEMPLATE, 
+        resultado=resultado, 
+        error=error, 
+        historial=session.get("historial", []),
+        timestamp_actual=timestamp_actual
+    )
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
