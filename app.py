@@ -1,6 +1,5 @@
 import os
 import base64
-import time
 from datetime import datetime
 from flask import Flask, render_template_string, request, session, redirect, url_for, jsonify
 from google import genai
@@ -12,9 +11,7 @@ from google.genai import types
 app = Flask(__name__)
 app.secret_key = "gravafilt_secret_key_2026_production_modular"
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # Sesión firme por 24 horas
 
-# Inicialización segura del cliente con timeout optimizado
 api_key_val = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key_val, http_options={'timeout': 300000})
 
@@ -161,7 +158,7 @@ HTML_TEMPLATE = """
     <nav class="navbar navbar-dark shadow-sm py-3 navbar-top">
         <div class="container d-flex justify-content-between align-items-center">
             <a class="navbar-brand fw-bold fs-6 fs-md-5 text-white" href="/">
-                <i class="fas fa-mountain me-2 text-warning"></i>GRAVAFILT S.A. <span class="text-info fs-7 d-block d-md-inline">| Arquitectura Modular por Micrositios</span>
+                <i class="fas fa-mountain me-2 text-warning"></i>GRAVAFILT S.A. <span class="text-info fs-7 d-block d-md-inline">| Micrositios Desacoplados</span>
             </a>
             <div class="d-flex align-items-center gap-3">
                 <span class="badge-corp d-none d-md-inline-block"><i class="fas fa-shield-alt me-1"></i> DIRECTORIO: LSANTIAGO</span>
@@ -177,7 +174,7 @@ HTML_TEMPLATE = """
                 <ul class="nav nav-pills mb-4 justify-content-center bg-white p-2 rounded-pill shadow-sm" id="pills-tab" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active rounded-pill px-4" id="pills-modulo1-tab" data-bs-toggle="pill" data-bs-target="#pills-modulo1" type="button" role="tab">
-                            <i class="fas fa-camera-retro me-2"></i>Micrositios 1: Captura y Granulometría
+                            <i class="fas fa-camera-retro me-2"></i>Micrositio 1: Captura y Granulometría
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
@@ -208,7 +205,7 @@ HTML_TEMPLATE = """
                                 <h2 class="text-dark fw-bold fs-3 fs-md-2 mb-2 mb-md-0">Micrositio 1: Carga de Muestra y Cuadro Granulométrico</h2>
                                 <span class="badge bg-primary text-white px-3 py-2 rounded-pill"><i class="fas fa-layer-group me-1"></i> Fase 1 Activa</span>
                             </div>
-                            <p class="text-muted mb-4 small">Suba o capture la fotografía de la muestra de árido. El sistema generará el cuadro granulométrico oficial IRAM/ASTM y resguardará la imagen para la Fase 2.</p>
+                            <p class="text-muted mb-4 small">Suba o capture la fotografía de la muestra. El sistema generará el cuadro IRAM/ASTM y registrará la imagen localmente para el Micrositio 2.</p>
 
                             <form id="formModulo1" onsubmit="enviarModulo1(event)">
                                 <div class="mb-4 preview-container">
@@ -217,11 +214,11 @@ HTML_TEMPLATE = """
                                         Seleccione Archivo o Capture con Cámara:
                                     </label>
                                     <input class="form-control form-control-lg mx-auto" type="file" id="fileInput" accept="image/*" capture="environment" required style="max-width: 500px;">
-                                    <div class="form-text text-muted mt-2">Optimización automática de resolución integrada para evitar congestión de red.</div>
+                                    <div class="form-text text-muted mt-2">Reducción de escala integrada para máxima velocidad.</div>
                                 </div>
                                 <div class="d-grid">
                                     <button type="submit" id="btnModulo1" class="btn btn-custom btn-lg text-white">
-                                        <i class="fas fa-calculator me-2"></i>Generar Cuadro Granulométrico y Resguardar Muestra
+                                        <i class="fas fa-calculator me-2"></i>Generar Cuadro Granulométrico y Memorizar Muestra
                                     </button>
                                 </div>
                             </form>
@@ -235,7 +232,7 @@ HTML_TEMPLATE = """
                                 <div id="resultadoContenido1" class="text-secondary" style="white-space: pre-line; line-height: 1.75; font-size: 0.95rem;"></div>
                                 
                                 <div class="mt-4 p-3 bg-light rounded-3 border text-center">
-                                    <p class="mb-2 fw-semibold text-dark small"><i class="fas fa-arrow-right text-primary me-1"></i> ¿Desea profundizar en las propiedades físicas, yacimiento fluvial y entorno?</p>
+                                    <p class="mb-2 fw-semibold text-dark small"><i class="fas fa-arrow-right text-primary me-1"></i> Muestra memorizada correctamente.</p>
                                     <button class="btn btn-sm btn-outline-primary rounded-pill px-4" onclick="irAModulo2()">Ir a Micrositio 2: Reporte Geotécnico Completo</button>
                                 </div>
                             </div>
@@ -253,23 +250,23 @@ HTML_TEMPLATE = """
                             <div id="loadingOverlay2" class="loading-overlay">
                                 <div class="spinner-border text-success mb-3" role="status" style="width: 3.5rem; height: 3.5rem;"></div>
                                 <h5 class="text-dark fw-bold">Generando dictamen geotécnico y de yacimientos fluviales...</h5>
-                                <p class="text-muted small text-center px-3">Gemini AI está analizando las propiedades físico-químicas, ubicación en lecho de río (costa vs canal medio) y comportamientos en destino.</p>
+                                <p class="text-muted small text-center px-3">Gemini AI analizando propiedades físico-químicas, ubicación en lecho de río y comportamientos en destino.</p>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
                                 <h2 class="text-dark fw-bold fs-3 fs-md-2 mb-2 mb-md-0">Micrositio 2: Reporte Profesional Técnico Geológico y Geotécnico</h2>
                                 <span class="badge bg-success text-white px-3 py-2 rounded-pill"><i class="fas fa-search-location me-1"></i> Fase 2 Especializada</span>
                             </div>
-                            <p class="text-muted mb-4 small">A partir de la muestra cargada en el Micrositio 1, active este botón para compilar el informe integral de propiedades físico-químicas, comportamiento en destino y trazabilidad en yacimientos de río.</p>
+                            <p class="text-muted mb-4 small">Active este botón para procesar la imagen almacenada y compilar el informe integral de propiedades físico-químicas, ubicación en yacimiento y comportamiento industrial.</p>
 
-                            <div id="avisoSinMuestra" class="alert alert-warning rounded-3 shadow-sm" style="display: {% if session.get('current_image') %}none{% else %}block{% endif %};">
-                                <i class="fas fa-exclamation-circle me-2"></i><strong>Atención:</strong> No hay ninguna muestra activa cargada en la sesión. Por favor, realice primero la carga en el <strong>Micrositio 1</strong>.
+                            <div id="avisoSinMuestra" class="alert alert-warning rounded-3 shadow-sm">
+                                <i class="fas fa-exclamation-circle me-2"></i><strong>Atención:</strong> No hay ninguna muestra activa registrada en el navegador. Por favor, suba una imagen en el <strong>Micrositio 1</strong> primero.
                             </div>
 
-                            <div id="panelConMuestra" style="display: {% if session.get('current_image') %}block{% else %}none{% endif %};">
+                            <div id="panelConMuestra" style="display: none;">
                                 <div class="text-center mb-4">
-                                    <img id="imagenActivaPreview" src="data:image/jpeg;base64,{{ session.get('current_image', '') }}" alt="Muestra Activa" class="thumb-muestra mb-2">
-                                    <div class="text-muted small">Muestra registrada y lista para análisis geotécnico avanzado.</div>
+                                    <img id="imagenActivaPreview" src="" alt="Muestra Activa" class="thumb-muestra mb-2">
+                                    <div class="text-muted small">Muestra persistida en memoria local, lista para análisis avanzado.</div>
                                 </div>
                                 <div class="d-grid">
                                     <button type="button" id="btnModulo2" class="btn btn-success-custom btn-lg" onclick="enviarModulo2()">
@@ -278,14 +275,12 @@ HTML_TEMPLATE = """
                                 </div>
                             </div>
 
-                            <div id="resultadoBox2" class="result-box" style="display: {% if session.get('current_report') %}block{% else %}none{% endif %}; border-left-color: #059669;">
+                            <div id="resultadoBox2" class="result-box" style="border-left-color: #059669;">
                                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap border-bottom pb-2">
                                     <h4 class="text-dark fw-bold fs-5 fs-md-4 mb-2 mb-md-0"><i class="fas fa-certificate text-success me-2"></i>Dictamen Técnico Oficial de Yacimiento y Geotecnia:</h4>
                                     <span class="text-muted small fw-semibold" id="timestampTexto2"></span>
                                 </div>
-                                <div id="resultadoContenido2" class="text-secondary" style="white-space: pre-line; line-height: 1.75; font-size: 0.95rem;">
-                                    {{ session.get('current_report', '') }}
-                                </div>
+                                <div id="resultadoContenido2" class="text-secondary" style="white-space: pre-line; line-height: 1.75; font-size: 0.95rem;"></div>
                             </div>
 
                             <div id="errorBox2" class="alert alert-danger mt-4 rounded-3 shadow-sm small" style="display: none;" role="alert">
@@ -298,37 +293,12 @@ HTML_TEMPLATE = """
                     <div class="tab-pane fade" id="pills-historial" role="tabpanel">
                         <div class="card p-4 p-md-5">
                             <h3 class="text-dark fw-bold mb-3"><i class="fas fa-archive text-primary me-2"></i>Historial Ejecutivo de Ensayos</h3>
-                            <p class="text-muted small mb-4">Registro cronológico de auditorías de laboratorio de la sesión.</p>
+                            <p class="text-muted small mb-4">Registro cronológico local de auditorías de laboratorio.</p>
                             <div id="listaHistorial">
-                                {% if historial and historial|length > 0 %}
-                                    <div class="list-group">
-                                        {% for item in historial %}
-                                        <div class="list-group-item list-group-item-action flex-column align-items-start mb-3 rounded-3 shadow-sm border p-4">
-                                            <div class="d-flex w-100 justify-content-between align-items-center mb-3 flex-wrap">
-                                                <h5 class="mb-1 fw-bold text-dark"><i class="fas fa-clipboard-check text-success me-2"></i>Ensayo ID: #{{ loop.revindex }}</h5>
-                                                <small class="text-muted fw-semibold"><i class="far fa-calendar-alt me-1"></i> {{ item.fecha }}</small>
-                                            </div>
-                                            <div class="row align-items-center g-3">
-                                                <div class="col-auto">
-                                                    {% if item.imagen %}
-                                                        <img src="data:image/jpeg;base64,{{ item.imagen }}" alt="Muestra" style="width: 70px; height: 70px; object-fit: cover; border-radius: 6px;">
-                                                    {% endif %}
-                                                </div>
-                                                <div class="col">
-                                                    <div class="text-secondary small" style="max-height: 100px; overflow: hidden; text-overflow: ellipsis;">
-                                                        {{ item.resumen[:300] }}...
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                {% else %}
-                                    <div class="text-center py-5 text-muted">
-                                        <i class="fas fa-folder-open fa-3x mb-3 text-secondary"></i>
-                                        <p class="fw-semibold">Aún no se han registrado ensayos institucionales en esta sesión.</p>
-                                    </div>
-                                {% endif %}
+                                <div class="text-center py-5 text-muted">
+                                    <i class="fas fa-folder-open fa-3x mb-3 text-secondary"></i>
+                                    <p class="fw-semibold">Los ensayos completados aparecerán aquí en orden cronológico.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -339,8 +309,24 @@ HTML_TEMPLATE = """
         </div>
     </div>
 
-    <!-- Script de control modular asíncrono -->
+    <!-- Script de control con localStorage blindado -->
     <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            verificarMuestraLocal();
+        });
+
+        function verificarMuestraLocal() {
+            const imgB64 = localStorage.getItem("gravafilt_current_image");
+            if (imgB64) {
+                document.getElementById('avisoSinMuestra').style.display = 'none';
+                document.getElementById('panelConMuestra').style.display = 'block';
+                document.getElementById('imagenActivaPreview').src = "data:image/jpeg;base64," + imgB64;
+            } else {
+                document.getElementById('avisoSinMuestra').style.display = 'block';
+                document.getElementById('panelConMuestra').style.display = 'none';
+            }
+        }
+
         function irAModulo2() {
             const triggerTab = document.querySelector('#pills-modulo2-tab');
             const tabObj = new bootstrap.Tab(triggerTab);
@@ -365,7 +351,7 @@ HTML_TEMPLATE = """
                     const canvas = document.createElement('canvas');
                     let width = img.width;
                     let height = img.height;
-                    const MAX_DIM = 850; // Óptimo para respuesta instantánea sin timeouts
+                    const MAX_DIM = 850; 
                     if (width > height && width > MAX_DIM) {
                         height *= MAX_DIM / width;
                         width = MAX_DIM;
@@ -379,6 +365,10 @@ HTML_TEMPLATE = """
                     ctx.drawImage(img, 0, 0, width, height);
                     
                     const base64Data = canvas.toDataURL('image/jpeg', 0.72).split(',')[1];
+
+                    // Guardar de forma ultra segura en localStorage del navegador
+                    localStorage.setItem("gravafilt_current_image", base64Data);
+                    verificarMuestraLocal();
 
                     fetch('/analizar-granulometria', {
                         method: 'POST',
@@ -403,15 +393,8 @@ HTML_TEMPLATE = """
                         } else {
                             document.getElementById('resultadoContenido1').innerText = resObj.data.resultado;
                             document.getElementById('timestampTexto1').innerText = "Emitido: " + resObj.data.timestamp;
-                            
-                            // Mostrar vista previa de imagen en resultado
                             document.getElementById('previewContenedorImg').innerHTML = `<img src="data:image/jpeg;base64,${base64Data}" alt="Muestra analizada" class="thumb-muestra">`;
                             document.getElementById('resultadoBox1').style.display = 'block';
-
-                            // Habilitar visualmente el módulo 2
-                            document.getElementById('avisoSinMuestra').style.display = 'none';
-                            document.getElementById('panelConMuestra').style.display = 'block';
-                            document.getElementById('imagenActivaPreview').src = `data:image/jpeg;base64,${base64Data}`;
                         }
                     })
                     .catch(err => {
@@ -427,6 +410,12 @@ HTML_TEMPLATE = """
         }
 
         function enviarModulo2() {
+            const imgB64 = localStorage.getItem("gravafilt_current_image");
+            if (!imgB64) {
+                alert("No hay imagen registrada. Suba una muestra en el Micrositio 1.");
+                return;
+            }
+
             document.getElementById('loadingOverlay2').style.display = 'flex';
             document.getElementById('btnModulo2').disabled = true;
             document.getElementById('errorBox2').style.display = 'none';
@@ -434,7 +423,7 @@ HTML_TEMPLATE = """
             fetch('/generar-reporte-geotecnico', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
+                body: JSON.stringify({ image_base64: imgB64 })
             })
             .then(async response => {
                 const textData = await response.text();
@@ -455,6 +444,31 @@ HTML_TEMPLATE = """
                     document.getElementById('resultadoContenido2').innerText = resObj.data.resultado;
                     document.getElementById('timestampTexto2').innerText = "Emitido: " + resObj.data.timestamp;
                     document.getElementById('resultadoBox2').style.display = 'block';
+
+                    // Agregar al historial visual
+                    const listaHistorial = document.getElementById('listaHistorial');
+                    if (listaHistorial.innerHTML.includes("Aún no se han registrado")) {
+                        listaHistorial.innerHTML = '<div class="list-group" id="grupoHistorial"></div>';
+                    }
+                    const grupo = document.getElementById('grupoHistorial') || listaHistorial;
+                    const nuevoItem = `
+                        <div class="list-group-item list-group-item-action flex-column align-items-start mb-3 rounded-3 shadow-sm border p-4">
+                            <div class="d-flex w-100 justify-content-between align-items-center mb-3 flex-wrap">
+                                <h5 class="mb-1 fw-bold text-dark"><i class="fas fa-clipboard-check text-success me-2"></i>Dictamen Geotécnico Oficial</h5>
+                                <small class="text-muted fw-semibold"><i class="far fa-calendar-alt me-1"></i> ${resObj.data.timestamp}</small>
+                            </div>
+                            <div class="row align-items-center g-3">
+                                <div class="col-auto">
+                                    <img src="data:image/jpeg;base64,${imgB64}" alt="Muestra" style="width: 70px; height: 70px; object-fit: cover; border-radius: 6px;">
+                                </div>
+                                <div class="col">
+                                    <div class="text-secondary small" style="max-height: 100px; overflow: hidden; text-overflow: ellipsis;">
+                                        ${resObj.data.resultado.substring(0, 300)}...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                    grupo.insertAdjacentHTML('afterbegin', nuevoItem);
                 }
             })
             .catch(err => {
@@ -515,8 +529,6 @@ def login():
         if request.form.get("username") == "lsantiago" and request.form.get("password") == "gravafil2026":
             session["authenticated"] = True
             session.permanent = True
-            if "historial" not in session: 
-                session["historial"] = []
             return redirect(url_for("index"))
         else:
             error = "Credenciales incorrectas."
@@ -533,30 +545,26 @@ def logout():
 def index():
     if not session.get("authenticated"): 
         return redirect(url_for("login"))
-    return render_template_string(HTML_TEMPLATE, historial=session.get("historial", []))
+    return render_template_string(HTML_TEMPLATE)
 
 
 @app.route("/analizar-granulometria", methods=["POST"])
 def analizar_granulometria():
     if not session.get("authenticated"):
-        return jsonify({"error": "Su sesión ha caducado. Vuelva a iniciar sesión."}), 401
+        return jsonify({"error": "Su sesión ha caducado."}), 401
 
     data = request.get_json()
     if not data or 'image_base64' not in data:
-        return jsonify({"error": "No se ha recibido la imagen de la muestra."}), 400
+        return jsonify({"error": "No se ha recibido la imagen."}), 400
 
     try:
-        img_b64 = data.get('image_base64')
-        image_bytes = base64.b64decode(img_b64)
+        image_bytes = base64.b64decode(data.get('image_base64'))
         timestamp_actual = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-
-        # Guardar en la sesión para el Micrositio 2
-        session["current_image"] = img_b64
 
         prompt_fase1 = (
             "Actúa como Ingeniero de Laboratorio de GRAVAFILT S.A. "
             "Examina la imagen de la muestra de árido y genera estrictamente:\n\n"
-            "1. **Clasificación Visual Preliminar de Partículas:** Morfología (angulosas, subredondeadas), esfericidad y estimación mineralógica principal.\n"
+            "1. **Clasificación Visual Preliminar de Partículas:** Morfología, esfericidad y estimación mineralógica principal.\n"
             "2. **Cuadro Granulométrico Oficial (Norma IRAM / ASTM):** Tabla en Markdown con columnas obligatorias: Tamiz (mm), % Retenido Parcial, % Retenido Acumulado y % Pasante Acumulado.\n"
             "3. **Parámetros Estadísticos:** Módulo de Finura (MF) y Tamaño Máximo Nominal (TMN)."
         )
@@ -566,13 +574,7 @@ def analizar_granulometria():
             contents=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"), prompt_fase1]
         )
 
-        resultado = response.text
-        session["current_report_fase1"] = resultado
-
-        return jsonify({
-            "resultado": resultado,
-            "timestamp": timestamp_actual
-        })
+        return jsonify({"resultado": response.text, "timestamp": timestamp_actual})
 
     except Exception as e:
         return jsonify({"error": f"Fallo al procesar granulometría: {str(e)}"}), 500
@@ -581,11 +583,13 @@ def analizar_granulometria():
 @app.route("/generar-reporte-geotecnico", methods=["POST"])
 def generar_reporte_geotecnico():
     if not session.get("authenticated"):
-        return jsonify({"error": "Su sesión ha caducado. Vuelva a iniciar sesión."}), 401
+        return jsonify({"error": "Su sesión ha caducado."}), 401
 
-    img_b64 = session.get("current_image")
+    data = request.get_json()
+    img_b64 = data.get('image_base64') if data else None
+    
     if not img_b64:
-        return jsonify({"error": "No hay ninguna imagen cargada en la sesión. Cargue una muestra en el Micrositio 1 primero."}), 400
+        return jsonify({"error": "No hay ninguna imagen cargada. Suba una muestra en el Micrositio 1 primero."}), 400
 
     try:
         image_bytes = base64.b64decode(img_b64)
@@ -593,12 +597,12 @@ def generar_reporte_geotecnico():
 
         prompt_fase2 = (
             "Actúa como Ingeniero Geotécnico Jefe y Director de Operaciones de Yacimientos de GRAVAFILT S.A. "
-            "Basándote en las características visuales y mineralógicas de la muestra de árido provista en imagen, redacta un REPORTE TÉCNICO PROFESIONAL estructurado exactamente en los siguientes 5 puntos:\n\n"
-            "1. **Propiedades Físico-Químicas de los Materiales:** Análisis detallado de densidad real y aparente estimada, porosidad, absorción y resistencia a la alteración o abrasión superficial según su composición.\n"
-            "2. **Ubicación Aproximada de Extracción en Yacimientos Fluviales de Río:** Deducción experta según la granulometría y selección visual: ¿El material proviene de zonas de orilla/costa (banco marginal con mayor presencia de limos o arenas finas) o del canal medio de corriente rápida (rodado limpio, mayor esfericidad y cantos rodados seleccionados)? Justifíquese técnicamente.\n"
-            "3. **Cualidades Organolépticas y Limpieza:** Descripción de textura táctil y visual, ausencia o presencia de materia orgánica, películas arcillosas o contaminantes reactivos.\n"
-            "4. **Comportamiento en Actividades de Destino (Aplicaciones Industriales):** Desempeño y compatibilidad técnica esperada para su uso en hormigones estructurales, pavimentación vial, sistemas de filtración industrial o capas de base granular.\n"
-            "5. **Explicaciones Relativas al Entorno y Encuadrado Granulométrico Regional:** Contextualización geomorfológica del material dentro de cuencas sedimentarias fluviales (ej. cuenca hidrológica regional), evaluando su comportamiento frente al desgaste hídrico y sugerencias de tratamiento en planta."
+            "Basándote en la muestra provista en imagen, redacta un REPORTE TÉCNICO PROFESIONAL estructurado exactamente en los siguientes 5 puntos:\n\n"
+            "1. **Propiedades Físico-Químicas de los Materiales:** Densidad, porosidad, absorción y resistencia a la abrasión.\n"
+            "2. **Ubicación Aproximada de Extracción en Yacimientos Fluviales de Río:** Deducción experta: ¿Proviene de zonas de orilla/costa (banco marginal con limos/arenas finas) o del canal medio de corriente rápida (rodado limpio, mayor esfericidad)? Justifíquese técnicamente.\n"
+            "3. **Cualidades Organolépticas y Limpieza:** Descripción de textura táctil y visual, ausencia o presencia de materia orgánica o arcillas.\n"
+            "4. **Comportamiento en Actividades de Destino:** Desempeño y compatibilidad para hormigones, pavimentación o filtración.\n"
+            "5. **Explicaciones Relativas al Entorno y Encuadrado Granulométrico Regional:** Contextualización geomorfológica dentro de cuencas sedimentarias fluviales."
         )
 
         response = client.models.generate_content(
@@ -606,24 +610,7 @@ def generar_reporte_geotecnico():
             contents=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"), prompt_fase2]
         )
 
-        resultado = response.text
-        session["current_report"] = resultado
-
-        # Guardar en el historial de sesión
-        nuevo_reporte = {
-            "fecha": timestamp_actual, 
-            "resumen": session.get("current_report_fase1", "") + "\n\n" + resultado, 
-            "imagen": img_b64
-        }
-        hist = session.get("historial", [])
-        hist.insert(0, nuevo_reporte)
-        session["historial"] = hist
-        session.modified = True
-
-        return jsonify({
-            "resultado": resultado,
-            "timestamp": timestamp_actual
-        })
+        return jsonify({"resultado": response.text, "timestamp": timestamp_actual})
 
     except Exception as e:
         return jsonify({"error": f"Fallo al generar reporte geotécnico: {str(e)}"}), 500
