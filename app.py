@@ -210,12 +210,8 @@ HTML_TEMPLATE = """
                                         <i class="fas fa-camera-retro fa-2x text-primary mb-2 d-block"></i>
                                         Seleccionar Archivo o Capturar con Cámara:
                                     </label>
-                                    <!-- Input visible para el usuario -->
                                     <input class="form-control form-control-lg mx-auto" type="file" id="fileInput" accept="image/*" capture="environment" required style="max-width: 500px;">
-                                    
-                                    <!-- Input oculto que viaja a Flask con la imagen ya optimizada -->
                                     <input type="hidden" id="image_base64" name="image_base64">
-                                    
                                     <div class="form-text mt-2 text-muted small">Optimización automática para conexiones móviles activada.</div>
                                 </div>
                                 <div class="d-grid">
@@ -317,7 +313,7 @@ HTML_TEMPLATE = """
         </div>
     </div>
 
-    <!-- Script de compresión móvil automática para evitar HTTP 502 -->
+    <!-- Script de compresión móvil automática -->
     <script>
         function procesarYEnviar(event) {
             event.preventDefault();
@@ -337,7 +333,6 @@ HTML_TEMPLATE = """
                     let width = img.width;
                     let height = img.height;
                     
-                    // Redimensionar si supera los 1200px para garantizar subida fluida en celulares
                     const MAX_DIM = 1200;
                     if (width > height && width > MAX_DIM) {
                         height *= MAX_DIM / width;
@@ -352,7 +347,6 @@ HTML_TEMPLATE = """
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    // Comprimir a JPEG con calidad 0.85
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
                     const base64Data = dataUrl.split(',')[1];
                     
@@ -519,7 +513,7 @@ def index():
                 for intento in range(max_intentos):
                     try:
                         response = client.models.generate_content(
-                            model='gemini-2.5-flash',
+                            model='gemini-3.6-flash',
                             contents=[
                                 types.Part.from_bytes(
                                     data=image_bytes,
