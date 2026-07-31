@@ -453,12 +453,12 @@ def index():
                         "6. **Dictamen de Calidad, Operativa y Uso Industrial:** Conclusión técnica formal firmada por el Directorio sobre la aptitud del material para hormigones estructurales, construcción o filtración industrial, detallando las acciones correctivas o ajustes necesarios en la línea de clasificación de la planta."
                     )
 
-                    # Sistema de reintentos con el modelo actual y estable 'gemini-2.5-flash'
+                    # Sistema de reintentos robusto usando el modelo estable 'gemini-3.6-flash'
                     max_intentos = 3
                     for intento in range(max_intentos):
                         try:
                             response = client.models.generate_content(
-                                model='gemini-2.5-flash',
+                                model='gemini-3.6-flash',
                                 contents=[
                                     types.Part.from_bytes(
                                         data=image_bytes,
