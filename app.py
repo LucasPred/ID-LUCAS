@@ -1,20 +1,20 @@
 import os
 import time
 import base64
+from io import BytesIO
+from PIL import Image
 from datetime import datetime
 from flask import Flask, render_template_string, request, session, redirect, url_for
 from google import genai
 from google.genai import types
-from google.genai.errors import APIError
 
 app = Flask(__name__)
 app.secret_key = "gravafilt_secret_key_2026_secure"
 
-# Inicialización segura del cliente con el SDK moderno y configuración de timeout extendido para evitar 502 Bad Gateway
 api_key_val = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(
     api_key=api_key_val,
-    http_options={'timeout': 60.0}  # Evita cortes por tiempo de espera en análisis de imágenes pesadas
+    http_options={'timeout': 60.0}
 )
 
 HTML_TEMPLATE = """
@@ -209,7 +209,6 @@ HTML_TEMPLATE = """
                                         <i class="fas fa-camera-retro fa-2x text-primary mb-2 d-block"></i>
                                         Cargar Muestra (Seleccionar Archivo o Capturar con Cámara):
                                     </label>
-                                    <!-- capture="environment" permite abrir directamente la cámara trasera en celulares y tablets -->
                                     <input class="form-control form-control-lg mx-auto" type="file" id="file" name="file" accept="image/*" capture="environment" required style="max-width: 500px;">
                                     <div class="form-text mt-2 text-muted small">Compatible con cámaras móviles (Android / iOS / Tablets). El motor ajustará el análisis según el material visualizado.</div>
                                 </div>
@@ -448,67 +447,77 @@ def index():
         session["historial"] = []
 
     if request.method == "POST":
-        if 'file' not in request.files:
+        file = request.files.get('file')
+        if not file or file.filename == '':
             error = "No se ha seleccionado ningún archivo o imagen."
         else:
-            file = request.files['file']
-            if file.filename == '':
-                error = "El archivo seleccionado no es válido."
-            else:
-                try:
-                    image_bytes = file.read()
-                    img_base64 = base64.b64encode(image_bytes).decode('utf-8')
-                    
-                    prompt = (
-                        "Actúa con rigor absoluto como Ingeniero Geotécnico, Geólogo y Jefe de Control de Calidad de plantas de áridos (GRAVAFILT S.A.). "
-                        "Analiza con extremo detalle técnico la fotografía provista de la muestra de material (arena o grava), contemplando que ante distintos materiales hay distintos análisis específicos de IA. "
-                        "Tu informe de laboratorio autónomo, técnico y geológico debe contener estrictamente lo siguiente:\n\n"
-                        "1. **Caracterización Geológica, Mineralógica y Fisotécnica:** Clasificación visual precisa del árido (origen aluvial/fluvial), morfología de las partículas (angulosas, subredondeadas, esfericidad), estimación de mineralogía predominante (ej. cuarzo, feldespatos) y ausencia o presencia de material limoso/arcilloso o finos.\n"
-                        "2. **Cualidades Organolépticas y Condiciones Físico-Químicas:** Descripción detallada de color, textura superficial, limpieza, ausencia de materia orgánica y comportamiento físico-químico esperado ante agentes agresivos.\n"
-                        "3. **Origen y Trazabilidad de Extracción:** Referencia analítica sobre el probable banco de extracción fluvial de río y su aptitud industrial.\n"
-                        "4. **Cuadro Granulométrico Oficial (Norma de Laboratorio IRAM / ASTM):** "
-                        "Construye una tabla formateada en Markdown clara y rigurosa que contenga exactamente estas columnas:\n"
-                        "   | Tamiz / Malla | Abertura (mm) | % Retenido Parcial | % Retenido Acumulado | % Pasante Acumulado |\n"
-                        "   Utiliza la serie estándar completa correspondiente al material analizado (ej: 9.5 mm, 4.75 mm, 2.36 mm, 1.18 mm, 0.600 mm, 0.300 mm, 0.150 mm, Fondo).\n"
-                        "5. **Parámetros Estadísticos del Ensayo:** Estimación técnica rigurosa del Módulo de Finura (MF) y Tamaño Máximo Nominal (TMN).\n"
-                        "6. **Dictamen de Calidad, Operativa y Uso Industrial:** Conclusión técnica formal firmada por el Directorio sobre la aptitud del material para hormigones estructurales, construcción o filtración industrial, detallando las acciones correctivas o ajustes necesarios en la línea de clasificación de la planta."
-                    )
+            try:
+                # COMPRESIÓN DE IMAGEN CON PILLOW: Evita archivos gigantescos que colapsen la API o den timeout 502
+                img = Image.open(file.stream)
+                img.verify()
+                
+                file.stream.seek(0)
+                img = Image.open(file.stream)
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+                
+                # Redimensionado inteligente a máximo 1280px para agilizar el tráfico con Gemini
+                img.thumbnail((1280, 1280))
+                
+                output_buffer = BytesIO()
+                img.save(output_buffer, format="JPEG", quality=85)
+                image_bytes = output_buffer.getvalue()
+                img_base64 = base64.b64encode(image_bytes).decode('utf-8')
+                
+                prompt = (
+                    "Actúa con rigor absoluto como Ingeniero Geotécnico, Geólogo y Jefe de Control de Calidad de plantas de áridos (GRAVAFILT S.A.). "
+                    "Analiza con extremo detalle técnico la fotografía provista de la muestra de material (arena o grava), contemplando que ante distintos materiales hay distintos análisis específicos de IA. "
+                    "Tu informe de laboratorio autónomo, técnico y geológico debe contener estrictamente lo siguiente:\n\n"
+                    "1. **Caracterización Geológica, Mineralógica y Fisotécnica:** Clasificación visual precisa del árido (origen aluvial/fluvial), morfología de las partículas (angulosas, subredondeadas, esfericidad), estimación de mineralogía predominante (ej. cuarzo, feldespatos) y ausencia o presencia de material limoso/arcilloso o finos.\n"
+                    "2. **Cualidades Organolépticas y Condiciones Físico-Químicas:** Descripción detallada de color, textura superficial, limpieza, ausencia de materia orgánica y comportamiento físico-químico esperado ante agentes agresivos.\n"
+                    "3. **Origen y Trazabilidad de Extracción:** Referencia analítica sobre el probable banco de extracción fluvial de río y su aptitud industrial.\n"
+                    "4. **Cuadro Granulométrico Oficial (Norma de Laboratorio IRAM / ASTM):** "
+                    "Construye una tabla formateada en Markdown clara y rigurosa que contenga exactamente estas columnas:\n"
+                    "   | Tamiz / Malla | Abertura (mm) | % Retenido Parcial | % Retenido Acumulado | % Pasante Acumulado |\n"
+                    "   Utiliza la serie estándar completa correspondiente al material analizado (ej: 9.5 mm, 4.75 mm, 2.36 mm, 1.18 mm, 0.600 mm, 0.300 mm, 0.150 mm, Fondo).\n"
+                    "5. **Parámetros Estadísticos del Ensayo:** Estimación técnica rigurosa del Módulo de Finura (MF) y Tamaño Máximo Nominal (TMN).\n"
+                    "6. **Dictamen de Calidad, Operativa y Uso Industrial:** Conclusión técnica formal firmada por el Directorio sobre la aptitud del material para hormigones estructurales, construcción o filtración industrial, detallando las acciones correctivas o ajustes necesarios en la línea de clasificación de la planta."
+                )
 
-                    max_intentos = 3
-                    for intento in range(max_intentos):
-                        try:
-                            response = client.models.generate_content(
-                                model='gemini-3.6-flash',
-                                contents=[
-                                    types.Part.from_bytes(
-                                        data=image_bytes,
-                                        mime_type=file.content_type,
-                                    ),
-                                    prompt
-                                ]
-                            )
-                            resultado = response.text
-                            break
-                        except Exception as api_err:
-                            # Captura reintentos para errores 502, 503, 429 o de red generales
-                            if intento < max_intentos - 1:
-                                time.sleep(3 * (intento + 1))
-                                continue
-                            raise api_err
+                max_intentos = 3
+                for intento in range(max_intentos):
+                    try:
+                        response = client.models.generate_content(
+                            model='gemini-3.6-flash',
+                            contents=[
+                                types.Part.from_bytes(
+                                    data=image_bytes,
+                                    mime_type="image/jpeg",
+                                ),
+                                prompt
+                            ]
+                        )
+                        resultado = response.text
+                        break
+                    except Exception as api_err:
+                        if intento < max_intentos - 1:
+                            time.sleep(3 * (intento + 1))
+                            continue
+                        raise api_err
 
-                    if resultado:
-                        nuevo_reporte = {
-                            "fecha": timestamp_actual,
-                            "resumen": resultado,
-                            "imagen": img_base64
-                        }
-                        hist_actual = session.get("historial", [])
-                        hist_actual.insert(0, nuevo_reporte)
-                        session["historial"] = hist_actual
-                        session.modified = True
+                if resultado:
+                    nuevo_reporte = {
+                        "fecha": timestamp_actual,
+                        "resumen": resultado,
+                        "imagen": img_base64
+                    }
+                    hist_actual = session.get("historial", [])
+                    hist_actual.insert(0, nuevo_reporte)
+                    session["historial"] = hist_actual
+                    session.modified = True
 
-                except Exception as e:
-                    error = f"Error temporal de pasarela o conexión con servidores (HTTP 502 / Timeout). Por favor, reintente en unos segundos: {str(e)}"
+            except Exception as e:
+                error = f"Error temporal de pasarela o conexión con servidores (HTTP 502 / Timeout). Por favor, reintente en unos segundos: {str(e)}"
 
     return render_template_string(
         HTML_TEMPLATE, 
