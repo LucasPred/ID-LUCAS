@@ -6,14 +6,14 @@ from google import genai
 from google.genai import types
 
 # ==========================================
-# CONFIGURACIÓN GENERAL DE LA APLICACIÓN FLASK
+# CONFIGURACIÓN GENERAL BLINDADA
 # ==========================================
 app = Flask(__name__)
-app.secret_key = "gravafilt_secret_key_2026_secure_permanent"
+app.secret_key = "gravafilt_secret_key_2026_production_secure"
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # Sesión extendida a 24 horas por seguridad operativa
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # Sesión firme por 24 horas
 
-# Inicialización del cliente de Google GenAI con timeout de 300 segundos (5 minutos)
+# Inicialización segura del cliente con timeout extendido de seguridad
 api_key_val = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key_val, http_options={'timeout': 300000})
 
@@ -144,7 +144,6 @@ HTML_TEMPLATE = """
 </head>
 <body>
 
-    <!-- Barra de Navegación Superior -->
     <nav class="navbar navbar-dark shadow-sm py-3 navbar-top">
         <div class="container d-flex justify-content-between align-items-center">
             <a class="navbar-brand fw-bold fs-6 fs-md-5 text-white" href="/">
@@ -157,12 +156,10 @@ HTML_TEMPLATE = """
         </div>
     </nav>
 
-    <!-- Contenedor Principal de la Interfaz -->
     <div class="container my-4 my-md-5">
         <div class="row justify-content-center">
             <div class="col-lg-11">
                 
-                <!-- Pestañas de Navegación -->
                 <ul class="nav nav-pills mb-4 justify-content-center bg-white p-2 rounded-pill shadow-sm" id="pills-tab" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active rounded-pill px-4" id="pills-analizador-tab" data-bs-toggle="pill" data-bs-target="#pills-analizador" type="button" role="tab">
@@ -181,27 +178,24 @@ HTML_TEMPLATE = """
                     </li>
                 </ul>
 
-                <!-- Contenido de Pestañas -->
                 <div class="tab-content" id="pills-tabContent">
                     
                     <!-- TAB 1: ANALIZADOR -->
                     <div class="tab-pane fade show active" id="pills-analizador" role="tabpanel">
                         <div class="card p-4 p-md-5">
                             
-                            <!-- Overlay de carga robusto -->
                             <div id="loadingOverlay">
                                 <div class="spinner-border text-primary mb-3" role="status" style="width: 3.5rem; height: 3.5rem;"></div>
                                 <h5 class="text-dark fw-bold">Procesando informe geológico institucional...</h5>
-                                <p class="text-muted small text-center px-3">Gemini IA está generando las tablas normativas IRAM/ASTM sin interrupciones. Por favor, no cierre esta ventana.</p>
+                                <p class="text-muted small text-center px-3">Gemini IA está generando las tablas normativas IRAM/ASTM de forma segura. Por favor, aguarde unos segundos.</p>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
                                 <h2 class="text-dark fw-bold fs-3 fs-md-2 mb-2 mb-md-0">Laboratorio Geológico Automatizado</h2>
-                                <span class="badge bg-success text-white px-3 py-2 rounded-pill"><i class="fas fa-check-circle me-1"></i> Sesión Anti-Timeout Activa</span>
+                                <span class="badge bg-success text-white px-3 py-2 rounded-pill"><i class="fas fa-check-circle me-1"></i> Servidor Producción Activo</span>
                             </div>
                             <p class="text-muted mb-4 small">Seleccione la fotografía de la muestra para emitir el dictamen oficial para el Directorio de GRAVAFILT S.A.</p>
 
-                            <!-- Formulario AJAX -->
                             <form id="analisisForm" onsubmit="enviarAsync(event)">
                                 <div class="mb-4 preview-container">
                                     <label for="fileInput" class="form-label fw-semibold text-secondary d-block mb-3">
@@ -218,7 +212,6 @@ HTML_TEMPLATE = """
                                 </div>
                             </form>
 
-                            <!-- Contenedor del Resultado -->
                             <div id="resultadoBox" class="result-box">
                                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap border-bottom pb-2">
                                     <h4 class="text-dark fw-bold fs-5 fs-md-4 mb-2 mb-md-0"><i class="fas fa-file-invoice text-success me-2"></i>Informe Técnico Oficial de Laboratorio:</h4>
@@ -227,7 +220,6 @@ HTML_TEMPLATE = """
                                 <div id="resultadoContenido" class="text-secondary" style="white-space: pre-line; line-height: 1.75; font-size: 0.95rem;"></div>
                             </div>
 
-                            <!-- Contenedor de Errores -->
                             <div id="errorBox" class="alert alert-danger mt-4 rounded-3 shadow-sm small" style="display: none;" role="alert">
                                 <i class="fas fa-exclamation-triangle me-2"></i><span id="errorTexto"></span>
                             </div>
@@ -303,7 +295,7 @@ HTML_TEMPLATE = """
         </div>
     </div>
 
-    <!-- Script AJAX con manejo anti-redirección de sesión -->
+    <!-- Script AJAX con control de errores JSON estricto (Evita HTML falso) -->
     <script>
         function enviarAsync(event) {
             event.preventDefault();
@@ -345,10 +337,10 @@ HTML_TEMPLATE = """
                     })
                     .then(async response => {
                         const contentType = response.headers.get("content-type");
-                        if (contentType && contentType.indexOf("application/json") !== -1) {
+                        if (contentType && contentType.includes("application/json")) {
                             return response.json();
                         } else {
-                            throw new Error("La sesión expiró o el servidor devolvió un error de HTML.");
+                            throw new Error("El servidor no devolvió una respuesta JSON válida. Verifique la conexión o el tamaño de la imagen.");
                         }
                     })
                     .then(data => {
@@ -370,7 +362,7 @@ HTML_TEMPLATE = """
                     .catch(err => {
                         document.getElementById('loadingOverlay').style.display = 'none';
                         document.getElementById('btnAnalizar').disabled = false;
-                        document.getElementById('errorTexto').innerText = "Error de comunicación: " + err.message;
+                        document.getElementById('errorTexto').innerText = "Fallo de comunicación: " + err.message;
                         document.getElementById('errorBox').style.display = 'block';
                     });
                 };
@@ -419,7 +411,7 @@ LOGIN_TEMPLATE = """
 
 
 # ==========================================
-# RUTAS Y CONTROLADORES DE FLASK
+# RUTAS Y CONTROLADORES SEGURIZADOS
 # ==========================================
 
 @app.route("/login", methods=["GET", "POST"])
@@ -452,12 +444,13 @@ def index():
 
 @app.route("/analizar-ajax", methods=["POST"])
 def analizar_ajax():
+    # Control estricto de sesión en JSON puro (Jamás devuelve HTML de redirección)
     if not session.get("authenticated"):
-        return jsonify({"error": "Su sesión expiró por inactividad. Por favor vuelva a iniciar sesión en otra pestaña."}), 401
+        return jsonify({"error": "Su sesión ha caducado. Vuelva a iniciar sesión en la plataforma."}), 401
 
     data = request.get_json()
     if not data or 'image_base64' not in data:
-        return jsonify({"error": "No se recibió la imagen de la muestra."})
+        return jsonify({"error": "No se ha recibido la estructura de la imagen de muestra."}), 400
 
     try:
         image_bytes = base64.b64decode(data.get('image_base64'))
@@ -475,7 +468,7 @@ def analizar_ajax():
         )
 
         response = client.models.generate_content(
-            model='gemini-3.6-flash',
+            model='gemini-2.5-flash',
             contents=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"), prompt]
         )
         resultado = response.text
@@ -493,7 +486,8 @@ def analizar_ajax():
         })
 
     except Exception as e:
-        return jsonify({"error": f"Error interno al procesar el ensayo con Gemini: {str(e)}"})
+        # Captura cualquier excepción de la API o del servidor y la devuelve limpia en formato JSON
+        return jsonify({"error": f"Fallo al procesar el ensayo geológico: {str(e)}"}), 500
 
 
 if __name__ == "__main__":
