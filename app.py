@@ -471,11 +471,11 @@ def index():
                     "6. **Dictamen de Calidad, Operativa y Uso Industrial:** Conclusión técnica formal firmada por el Directorio sobre la aptitud del material para hormigones estructurales, construcción o filtración industrial, detallando las acciones correctivas o ajustes necesarios en la línea de clasificación de la planta."
                 )
 
-                max_intentos = 3
+                max_intentos = 4
                 for intento in range(max_intentos):
                     try:
                         response = client.models.generate_content(
-                            model='gemini-3.5-flash',
+                            model='gemini-3.6-flash',
                             contents=[
                                 types.Part.from_bytes(
                                     data=image_bytes,
@@ -488,7 +488,7 @@ def index():
                         break
                     except Exception as api_err:
                         if intento < max_intentos - 1:
-                            time.sleep(3 * (intento + 1))
+                            time.sleep(4 * (intento + 1))
                             continue
                         raise api_err
 
@@ -504,7 +504,7 @@ def index():
                     session.modified = True
 
             except Exception as e:
-                error = f"Error temporal de pasarela o conexión con servidores (HTTP 502 / Timeout). Por favor, reintente en unos segundos: {str(e)}"
+                error = f"Error temporal de pasarela o saturación en los servidores de la API (503 / Alta Demanda). El sistema intentó reconectar automáticamente pero persistió la congestión. Por favor, reintente en unos segundos: {str(e)}"
 
     return render_template_string(
         HTML_TEMPLATE, 
