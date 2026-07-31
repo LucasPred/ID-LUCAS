@@ -14,7 +14,7 @@ app.secret_key = "gravafilt_secret_key_2026_production_secure"
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # Sesión firme por 24 horas
 
-# Inicialización segura del cliente con timeout extendido de seguridad
+# Inicialización segura del cliente con timeout extendido
 api_key_val = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key_val, http_options={'timeout': 300000})
 
@@ -188,7 +188,7 @@ HTML_TEMPLATE = """
                             <div id="loadingOverlay">
                                 <div class="spinner-border text-primary mb-3" role="status" style="width: 3.5rem; height: 3.5rem;"></div>
                                 <h5 class="text-dark fw-bold">Procesando informe geológico institucional...</h5>
-                                <p class="text-muted small text-center px-3">Gemini IA está generando las tablas normativas IRAM/ASTM de forma segura. Si hay alta demanda, el sistema reintentará automáticamente.</p>
+                                <p class="text-muted small text-center px-3">Gemini IA está generando las tablas normativas IRAM/ASTM de forma segura. Por favor, aguarde.</p>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
@@ -204,7 +204,7 @@ HTML_TEMPLATE = """
                                         Seleccionar Archivo o Capturar con Cámara:
                                     </label>
                                     <input class="form-control form-control-lg mx-auto" type="file" id="fileInput" accept="image/*" capture="environment" required style="max-width: 500px;">
-                                    <div class="form-text text-muted mt-2">Formatos admitidos: JPG, PNG, WEBP.</div>
+                                    <div class="form-text text-muted mt-2">Formatos admitidos: JPG, PNG, WEBP. (Se optimiza automáticamente).</div>
                                 </div>
                                 <div class="d-grid">
                                     <button type="submit" id="btnAnalizar" class="btn btn-custom btn-lg text-white">
@@ -296,7 +296,7 @@ HTML_TEMPLATE = """
         </div>
     </div>
 
-    <!-- Script AJAX con control de errores JSON estricto -->
+    <!-- Script AJAX ultra robusto con compresión de imagen y lectura de texto plano ante errores de servidor -->
     <script>
         function enviarAsync(event) {
             event.preventDefault();
@@ -316,7 +316,7 @@ HTML_TEMPLATE = """
                     const canvas = document.createElement('canvas');
                     let width = img.width;
                     let height = img.height;
-                    const MAX_DIM = 1000;
+                    const MAX_DIM = 900; // Máximo optimizado para evitar timeouts en servidores cloud
                     if (width > height && width > MAX_DIM) {
                         height *= MAX_DIM / width;
                         width = MAX_DIM;
@@ -329,7 +329,7 @@ HTML_TEMPLATE = """
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    const base64Data = canvas.toDataURL('image/jpeg', 0.80).split(',')[1];
+                    const base64Data = canvas.toDataURL('image/jpeg', 0.75).split(',')[1];
 
                     fetch('/analizar-ajax', {
                         method: 'POST',
@@ -337,33 +337,35 @@ HTML_TEMPLATE = """
                         body: JSON.stringify({ image_base64: base64Data })
                     })
                     .then(async response => {
-                        const contentType = response.headers.get("content-type");
-                        if (contentType && contentType.includes("application/json")) {
-                            return response.json();
-                        } else {
-                            throw new Error("El servidor no devolvió una respuesta JSON válida. Verifique la conexión o el tamaño de la imagen.");
+                        const textData = await response.text();
+                        try {
+                            const jsonData = JSON.parse(textData);
+                            return { ok: response.ok, status: response.status, data: jsonData };
+                        } catch (parseErr) {
+                            // Si el servidor devolvió HTML (ej. Error 502 Bad Gateway o 504 Gateway Timeout)
+                            throw new Error("El servidor web interrumpió la conexión o superó el tiempo de espera (Timeout/502). Detalle: " + textData.substring(0, 120));
                         }
                     })
-                    .then(data => {
+                    .then(resObj => {
                         document.getElementById('loadingOverlay').style.display = 'none';
                         document.getElementById('btnAnalizar').disabled = false;
 
-                        if (data.error) {
-                            document.getElementById('errorTexto').innerText = data.error;
+                        if (!resObj.ok || resObj.data.error) {
+                            document.getElementById('errorTexto').innerText = resObj.data.error || "Error desconocido en el servidor.";
                             document.getElementById('errorBox').style.display = 'block';
                         } else {
-                            document.getElementById('resultadoContenido').innerText = data.resultado;
-                            document.getElementById('timestampTexto').innerText = "Emitido: " + data.timestamp;
+                            document.getElementById('resultadoContenido').innerText = resObj.data.resultado;
+                            document.getElementById('timestampTexto').innerText = "Emitido: " + resObj.data.timestamp;
                             document.getElementById('resultadoBox').style.display = 'block';
-                            if (data.contador) {
-                                document.getElementById('contadorHistorial').innerText = data.contador;
+                            if (resObj.data.contador) {
+                                document.getElementById('contadorHistorial').innerText = resObj.data.contador;
                             }
                         }
                     })
                     .catch(err => {
                         document.getElementById('loadingOverlay').style.display = 'none';
                         document.getElementById('btnAnalizar').disabled = false;
-                        document.getElementById('errorTexto').innerText = "Fallo de comunicación: " + err.message;
+                        document.getElementById('errorTexto').innerText = err.message;
                         document.getElementById('errorBox').style.display = 'block';
                     });
                 };
@@ -467,7 +469,7 @@ def analizar_ajax():
             "6. **Dictamen de Calidad, Operativa y Uso Industrial:** Conclusión formal del Directorio sobre su aplicación en hormigones, construcción o filtración, incluyendo sugerencias de ajuste en planta."
         )
 
-        # Sistema de reintentos automáticos (Backoff) para evitar interrupciones por saturación 503
+        # Sistema de reintentos automáticos (Backoff) ante picos de demanda 503
         max_intentos = 3
         reintentos_delay = 2
         response = None
@@ -475,7 +477,7 @@ def analizar_ajax():
         for intento in range(max_intentos):
             try:
                 response = client.models.generate_content(
-                    model='gemini-3.6-flash',
+                    model='gemini-3.5-flash',
                     contents=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"), prompt]
                 )
                 break
@@ -483,7 +485,7 @@ def analizar_ajax():
                 err_str = str(api_err)
                 if ("503" in err_str or "UNAVAILABLE" in err_str) and intento < max_intentos - 1:
                     time.sleep(reintentos_delay)
-                    reintentos_delay *= 2  # Incrementa la espera exponencialmente
+                    reintentos_delay *= 2
                     continue
                 else:
                     raise api_err
