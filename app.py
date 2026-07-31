@@ -57,9 +57,8 @@ HTML_TEMPLATE = """
             border-radius: 12px;
             margin-top: 25px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-            overflow-x: auto; /* Evita desbordes en celulares */
+            overflow-x: auto;
         }
-        /* Contenedor responsivo para tablas generadas en Markdown */
         .result-box table {
             width: 100%;
             margin-top: 15px;
@@ -82,7 +81,6 @@ HTML_TEMPLATE = """
         .result-box tr:nth-child(even) {
             background-color: #f8fafc;
         }
-        /* Capa de carga elegante y fluida (Evita pantallas negras o parpadeos bruscos) */
         #loadingOverlay {
             position: absolute;
             top: 0;
@@ -118,7 +116,7 @@ HTML_TEMPLATE = """
                 <!-- Tarjeta del Formulario -->
                 <div class="card p-3 p-md-5">
                     
-                    <!-- Capa de Carga Interna (Fluida y sin apagar pantalla) -->
+                    <!-- Capa de Carga Interna -->
                     <div id="loadingOverlay">
                         <div class="spinner-border text-primary mb-3" role="status" style="width: 3.5rem; height: 3.5rem;">
                             <span class="visually-hidden">Procesando...</span>
@@ -161,10 +159,9 @@ HTML_TEMPLATE = """
         </div>
     </div>
 
-    <!-- Script de animación fluida (Evita parpadeos y pantallas negras) -->
+    <!-- Script de animación fluida -->
     <script>
         function mostrarCarga(event) {
-            // Muestra la capa de carga suave sobre la tarjeta
             document.getElementById('loadingOverlay').style.display = 'flex';
             document.getElementById('btnAnalizar').disabled = true;
         }
@@ -205,12 +202,12 @@ def index():
                         "4. **Dictamen de Calidad y Operativa:** Conclusión técnica formal sobre la aptitud del material para hormigones, construcción o filtración industrial, detallando las acciones correctivas o ajustes necesarios en la línea de clasificación de la planta."
                     )
 
-                    # Sistema de reintentos ante picos de tráfico en Render / API
+                    # Sistema de reintentos con el modelo actual y estable 'gemini-2.0-flash'
                     max_intentos = 3
                     for intento in range(max_intentos):
                         try:
                             response = client.models.generate_content(
-                                model='gemini-2.5-flash',
+                                model='gemini-2.0-flash',
                                 contents=[
                                     types.Part.from_bytes(
                                         data=image_bytes,
@@ -222,7 +219,7 @@ def index():
                             resultado = response.text
                             break
                         except Exception as api_err:
-                            if "503" in str(api_err) and intento < max_intentos - 1:
+                            if ("503" in str(api_err) or "404" in str(api_err)) and intento < max_intentos - 1:
                                 time.sleep(2 * (intento + 1))
                                 continue
                             raise api_err
