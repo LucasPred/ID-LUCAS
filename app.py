@@ -6,14 +6,17 @@ from datetime import datetime
 from flask import Flask, render_template_string, request, session, redirect, url_for
 from google import genai
 from google.genai import types
+from google.genai import errors
 
 app = Flask(__name__)
 app.secret_key = "gravafilt_secret_key_2026_secure"
 
 api_key_val = os.environ.get("GEMINI_API_KEY")
+
+# Forzamos un timeout robusto de 120 segundos para evitar cortes prematuros al subir imágenes
 client = genai.Client(
     api_key=api_key_val,
-    http_options={'timeout': 60.0}
+    http_options={'timeout': 120000} 
 )
 
 HTML_TEMPLATE = """
@@ -451,7 +454,6 @@ def index():
             error = "No se ha seleccionado ningún archivo o imagen."
         else:
             try:
-                # Lectura directa en bytes utilizando herramientas nativas (sin requerir Pillow)
                 image_bytes = file.read()
                 img_base64 = base64.b64encode(image_bytes).decode('utf-8')
                 
