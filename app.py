@@ -9,12 +9,13 @@ from google.genai import types
 # CONFIGURACIÓN GENERAL DE LA APLICACIÓN FLASK
 # ==========================================
 app = Flask(__name__)
-app.secret_key = "gravafilt_secret_key_2026_secure"
+app.secret_key = "gravafilt_secret_key_2026_secure_permanent"
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # Sesión extendida a 24 horas por seguridad operativa
 
-# Inicialización del cliente de Google GenAI con el SDK moderno y timeout extendido
+# Inicialización del cliente de Google GenAI con timeout de 300 segundos (5 minutos)
 api_key_val = os.environ.get("GEMINI_API_KEY")
-client = genai.Client(api_key=api_key_val, http_options={'timeout': 120000})
+client = genai.Client(api_key=api_key_val, http_options={'timeout': 300000})
 
 
 # ==========================================
@@ -27,9 +28,7 @@ HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>GRAVAFILT S.A. | Dirección y Control de Calidad Geológica y Áridos</title>
-    <!-- Bootstrap 5 CSS CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome Icons CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body {
@@ -111,7 +110,7 @@ HTML_TEMPLATE = """
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.96);
             z-index: 1000;
             display: none;
             flex-direction: column;
@@ -163,7 +162,7 @@ HTML_TEMPLATE = """
         <div class="row justify-content-center">
             <div class="col-lg-11">
                 
-                <!-- Pestañas de Navegación del Panel -->
+                <!-- Pestañas de Navegación -->
                 <ul class="nav nav-pills mb-4 justify-content-center bg-white p-2 rounded-pill shadow-sm" id="pills-tab" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active rounded-pill px-4" id="pills-analizador-tab" data-bs-toggle="pill" data-bs-target="#pills-analizador" type="button" role="tab">
@@ -182,27 +181,27 @@ HTML_TEMPLATE = """
                     </li>
                 </ul>
 
-                <!-- Contenido de las Pestañas -->
+                <!-- Contenido de Pestañas -->
                 <div class="tab-content" id="pills-tabContent">
                     
-                    <!-- TAB 1: ANALIZADOR DE MUESTRAS -->
+                    <!-- TAB 1: ANALIZADOR -->
                     <div class="tab-pane fade show active" id="pills-analizador" role="tabpanel">
                         <div class="card p-4 p-md-5">
                             
-                            <!-- Overlay de carga asíncrona -->
+                            <!-- Overlay de carga robusto -->
                             <div id="loadingOverlay">
                                 <div class="spinner-border text-primary mb-3" role="status" style="width: 3.5rem; height: 3.5rem;"></div>
-                                <h5 class="text-dark fw-bold">Generando informe geológico exhaustivo...</h5>
-                                <p class="text-muted small text-center px-3">Gemini IA está procesando la caracterización detallada y las tablas IRAM/ASTM en segundo plano sin cortes.</p>
+                                <h5 class="text-dark fw-bold">Procesando informe geológico institucional...</h5>
+                                <p class="text-muted small text-center px-3">Gemini IA está generando las tablas normativas IRAM/ASTM sin interrupciones. Por favor, no cierre esta ventana.</p>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
                                 <h2 class="text-dark fw-bold fs-3 fs-md-2 mb-2 mb-md-0">Laboratorio Geológico Automatizado</h2>
-                                <span class="badge bg-success text-white px-3 py-2 rounded-pill"><i class="fas fa-check-circle me-1"></i> Sistema Blindado Anti-Errores</span>
+                                <span class="badge bg-success text-white px-3 py-2 rounded-pill"><i class="fas fa-check-circle me-1"></i> Sesión Anti-Timeout Activa</span>
                             </div>
-                            <p class="text-muted mb-4 small">Capture la fotografía con su dispositivo móvil o cargue la muestra de árido para iniciar el protocolo técnico completo de GRAVAFILT S.A.</p>
+                            <p class="text-muted mb-4 small">Seleccione la fotografía de la muestra para emitir el dictamen oficial para el Directorio de GRAVAFILT S.A.</p>
 
-                            <!-- Formulario de Análisis con AJAX -->
+                            <!-- Formulario AJAX -->
                             <form id="analisisForm" onsubmit="enviarAsync(event)">
                                 <div class="mb-4 preview-container">
                                     <label for="fileInput" class="form-label fw-semibold text-secondary d-block mb-3">
@@ -210,16 +209,16 @@ HTML_TEMPLATE = """
                                         Seleccionar Archivo o Capturar con Cámara:
                                     </label>
                                     <input class="form-control form-control-lg mx-auto" type="file" id="fileInput" accept="image/*" capture="environment" required style="max-width: 500px;">
-                                    <div class="form-text text-muted mt-2">Formatos admitidos: JPG, PNG, WEBP (Optimización automática en cliente).</div>
+                                    <div class="form-text text-muted mt-2">Formatos admitidos: JPG, PNG, WEBP.</div>
                                 </div>
                                 <div class="d-grid">
                                     <button type="submit" id="btnAnalizar" class="btn btn-custom btn-lg text-white">
-                                        <i class="fas fa-atom me-2"></i>Ejecutar Diagnóstico Geológico Completo con Gemini
+                                        <i class="fas fa-atom me-2"></i>Ejecutar Diagnóstico Geológico Completo
                                     </button>
                                 </div>
                             </form>
 
-                            <!-- Contenedor del Resultado del Informe -->
+                            <!-- Contenedor del Resultado -->
                             <div id="resultadoBox" class="result-box">
                                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap border-bottom pb-2">
                                     <h4 class="text-dark fw-bold fs-5 fs-md-4 mb-2 mb-md-0"><i class="fas fa-file-invoice text-success me-2"></i>Informe Técnico Oficial de Laboratorio:</h4>
@@ -235,11 +234,11 @@ HTML_TEMPLATE = """
                         </div>
                     </div>
 
-                    <!-- TAB 2: HISTORIAL DE ENSAYOS -->
+                    <!-- TAB 2: HISTORIAL -->
                     <div class="tab-pane fade" id="pills-historial" role="tabpanel">
                         <div class="card p-4 p-md-5">
                             <h3 class="text-dark fw-bold mb-3"><i class="fas fa-archive text-primary me-2"></i>Historial Resguardado de Ensayos</h3>
-                            <p class="text-muted small mb-4">Registro cronológico detallado de los análisis geológicos ejecutados durante la sesión activa del Directorio.</p>
+                            <p class="text-muted small mb-4">Registro cronológico detallado de los análisis geológicos ejecutados durante la sesión.</p>
                             <div id="listaHistorial">
                                 {% if historial and historial|length > 0 %}
                                     <div class="list-group">
@@ -269,14 +268,14 @@ HTML_TEMPLATE = """
                                 {% else %}
                                     <div class="text-center py-5 text-muted">
                                         <i class="fas fa-folder-open fa-3x mb-3 text-secondary"></i>
-                                        <p class="fw-semibold">Aún no se han registrado ensayos en esta sesión activa.</p>
+                                        <p class="fw-semibold">Aún no se han registrado ensayos en esta sesión.</p>
                                     </div>
                                 {% endif %}
                             </div>
                         </div>
                     </div>
 
-                    <!-- TAB 3: TRAZABILIDAD Y ORIGEN -->
+                    <!-- TAB 3: TRAZABILIDAD -->
                     <div class="tab-pane fade" id="pills-trazabilidad" role="tabpanel">
                         <div class="card p-4 p-md-5">
                             <h3 class="text-dark fw-bold mb-3"><i class="fas fa-map-marked-alt text-primary me-2"></i>Origen, Trazabilidad y Marco Geológico</h3>
@@ -285,13 +284,13 @@ HTML_TEMPLATE = """
                                 <div class="col-md-6">
                                     <div class="p-4 border rounded-3 bg-light h-100">
                                         <h5 class="text-dark fw-bold mb-3"><i class="fas fa-water text-info me-2"></i>Extracción y Cuencas</h5>
-                                        <p class="text-secondary small">Materiales procesados por GRAVAFILT S.A. provenientes de extracciones fluviales controladas, asegurando granulometrías estables para la industria de la construcción y filtración.</p>
+                                        <p class="text-secondary small">Materiales procesados por GRAVAFILT S.A. provenientes de extracciones fluviales controladas.</p>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="p-4 border rounded-3 bg-light h-100">
                                         <h5 class="text-dark fw-bold mb-3"><i class="fas fa-certificate text-warning me-2"></i>Garantía de Directorio</h5>
-                                        <p class="text-secondary small">Supervisado directamente por el Directorio ejecutivo (Usuario autorizado: <strong>lsantiago</strong>), garantizando trazabilidad y cumplimiento de estándares de calidad corporativos.</p>
+                                        <p class="text-secondary small">Supervisado directamente por el Directorio ejecutivo (Usuario: <strong>lsantiago</strong>).</p>
                                     </div>
                                 </div>
                             </div>
@@ -304,7 +303,7 @@ HTML_TEMPLATE = """
         </div>
     </div>
 
-    <!-- Script AJAX robusto con control automático de sesión -->
+    <!-- Script AJAX con manejo anti-redirección de sesión -->
     <script>
         function enviarAsync(event) {
             event.preventDefault();
@@ -349,11 +348,10 @@ HTML_TEMPLATE = """
                         if (contentType && contentType.indexOf("application/json") !== -1) {
                             return response.json();
                         } else {
-                            window.location.href = '/login';
+                            throw new Error("La sesión expiró o el servidor devolvió un error de HTML.");
                         }
                     })
                     .then(data => {
-                        if (!data) return;
                         document.getElementById('loadingOverlay').style.display = 'none';
                         document.getElementById('btnAnalizar').disabled = false;
 
@@ -372,7 +370,7 @@ HTML_TEMPLATE = """
                     .catch(err => {
                         document.getElementById('loadingOverlay').style.display = 'none';
                         document.getElementById('btnAnalizar').disabled = false;
-                        document.getElementById('errorTexto').innerText = "Error de red asíncrona: " + err;
+                        document.getElementById('errorTexto').innerText = "Error de comunicación: " + err.message;
                         document.getElementById('errorBox').style.display = 'block';
                     });
                 };
@@ -381,7 +379,6 @@ HTML_TEMPLATE = """
             reader.readAsDataURL(file);
         }
     </script>
-    <!-- Bootstrap JS Bundle CDN -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
@@ -431,6 +428,7 @@ def login():
     if request.method == "POST":
         if request.form.get("username") == "lsantiago" and request.form.get("password") == "gravafil2026":
             session["authenticated"] = True
+            session.permanent = True
             if "historial" not in session: 
                 session["historial"] = []
             return redirect(url_for("index"))
@@ -441,7 +439,7 @@ def login():
 
 @app.route("/logout")
 def logout():
-    session.pop("authenticated", None)
+    session.clear()
     return redirect(url_for("login"))
 
 
@@ -455,18 +453,16 @@ def index():
 @app.route("/analizar-ajax", methods=["POST"])
 def analizar_ajax():
     if not session.get("authenticated"):
-        return jsonify({"error": "Sesión expirada"}), 401
+        return jsonify({"error": "Su sesión expiró por inactividad. Por favor vuelva a iniciar sesión en otra pestaña."}), 401
 
     data = request.get_json()
-    img_base64 = data.get('image_base64')
-    if not img_base64:
-        return jsonify({"error": "No se recibió la imagen."})
+    if not data or 'image_base64' not in data:
+        return jsonify({"error": "No se recibió la imagen de la muestra."})
 
     try:
-        image_bytes = base64.b64decode(img_base64)
+        image_bytes = base64.b64decode(data.get('image_base64'))
         timestamp_actual = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-        # Prompt técnico completo, profundo y detallado de laboratorio geológico
         prompt = (
             "Actúa como Ingeniero Geotécnico Jefe de GRAVAFILT S.A. "
             "Analiza con rigurosidad técnica la imagen de la muestra de árido y emite un informe exhaustivo estructurado exactamente en los siguientes 6 puntos:\n\n"
@@ -484,8 +480,7 @@ def analizar_ajax():
         )
         resultado = response.text
 
-        # Almacenamiento seguro en el historial de la sesión
-        nuevo_reporte = {"fecha": timestamp_actual, "resumen": resultado, "imagen": img_base64}
+        nuevo_reporte = {"fecha": timestamp_actual, "resumen": resultado, "imagen": data.get('image_base64')}
         hist = session.get("historial", [])
         hist.insert(0, nuevo_reporte)
         session["historial"] = hist
@@ -498,7 +493,7 @@ def analizar_ajax():
         })
 
     except Exception as e:
-        return jsonify({"error": f"Error interno en servidor al consultar la IA: {str(e)}"})
+        return jsonify({"error": f"Error interno al procesar el ensayo con Gemini: {str(e)}"})
 
 
 if __name__ == "__main__":
