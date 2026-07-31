@@ -1,7 +1,6 @@
 import os
 import time
 import base64
-from io import BytesIO
 from datetime import datetime
 from flask import Flask, render_template_string, request, session, redirect, url_for
 from google import genai
@@ -9,6 +8,7 @@ from google.genai import types
 
 app = Flask(__name__)
 app.secret_key = "gravafilt_secret_key_2026_secure"
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Límite seguro de subida de 16MB
 
 api_key_val = os.environ.get("GEMINI_API_KEY")
 
@@ -146,7 +146,7 @@ HTML_TEMPLATE = """
 </head>
 <body>
 
-    <!-- Barra de Navegación Institucional (Directorio y Accionistas) -->
+    <!-- Barra de Navegación Institucional -->
     <nav class="navbar navbar-dark shadow-sm py-3 navbar-top">
         <div class="container d-flex justify-content-between align-items-center">
             <a class="navbar-brand fw-bold fs-6 fs-md-5 text-white text-wrap" href="/">
@@ -164,7 +164,7 @@ HTML_TEMPLATE = """
         <div class="row justify-content-center">
             <div class="col-lg-11">
                 
-                <!-- Pestañas de Navegación Interactivas -->
+                <!-- Pestañas de Navegación -->
                 <ul class="nav nav-pills mb-4 justify-content-center bg-white p-2 rounded-pill shadow-sm" id="pills-tab" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active rounded-pill px-4" id="pills-analizador-tab" data-bs-toggle="pill" data-bs-target="#pills-analizador" type="button" role="tab">
@@ -185,42 +185,47 @@ HTML_TEMPLATE = """
 
                 <div class="tab-content" id="pills-tabContent">
                     
-                    <!-- PESTAÑA 1: ANALIZADOR DE MUESTRAS IA -->
+                    <!-- PESTAÑA 1: ANALIZADOR -->
                     <div class="tab-pane fade show active" id="pills-analizador" role="tabpanel">
                         <div class="card p-4 p-md-5">
                             
-                            <!-- Capa de Carga Interna Fluida -->
+                            <!-- Capa de Carga Interna -->
                             <div id="loadingOverlay">
                                 <div class="spinner-border text-primary mb-3" role="status" style="width: 3.5rem; height: 3.5rem;">
                                     <span class="visually-hidden">Procesando...</span>
                                 </div>
-                                <h5 class="text-dark fw-bold">Gemini IA analizando muestra geológica...</h5>
-                                <p class="text-muted small text-center px-3">Evaluando granulometría, mineralogía, curvas de tamices IRAM/ASTM y trazabilidad de extracción fluvial. Aguarde unos segundos.</p>
+                                <h5 class="text-dark fw-bold">Optimizando y analizando muestra...</h5>
+                                <p class="text-muted small text-center px-3">Gemini IA está evaluando granulometría, mineralogía y tablas IRAM/ASTM. Aguarde unos segundos.</p>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
                                 <h2 class="text-dark fw-bold fs-3 fs-md-2 mb-2 mb-md-0">Laboratorio Geológico Automatizado</h2>
-                                <span class="badge bg-success text-white px-3 py-2 rounded-pill"><i class="fas fa-check-circle me-1"></i> Sistema Operativo Cloud Conectado</span>
+                                <span class="badge bg-success text-white px-3 py-2 rounded-pill"><i class="fas fa-check-circle me-1"></i> Sistema Cloud Conectado</span>
                             </div>
-                            <p class="text-muted mb-4 small fs-md-6">Plataforma corporativa exclusiva para validación de extracciones de río y procesamiento industrial de arenas y gravas. Suba un archivo o active directamente la cámara de su dispositivo móvil o tablet.</p>
+                            <p class="text-muted mb-4 small fs-md-6">Suba un archivo o active directamente la cámara de su celular o tablet. Las imágenes grandes se comprimen automáticamente para evitar errores de red.</p>
 
-                            <form method="POST" enctype="multipart/form-data" onsubmit="mostrarCarga(event)">
+                            <form id="analisisForm" method="POST" enctype="multipart/form-data" onsubmit="procesarYEnviar(event)">
                                 <div class="mb-4 preview-container">
-                                    <label for="file" class="form-label fw-semibold text-secondary d-block mb-3">
+                                    <label for="fileInput" class="form-label fw-semibold text-secondary d-block mb-3">
                                         <i class="fas fa-camera-retro fa-2x text-primary mb-2 d-block"></i>
-                                        Cargar Muestra (Seleccionar Archivo o Capturar con Cámara):
+                                        Seleccionar Archivo o Capturar con Cámara:
                                     </label>
-                                    <input class="form-control form-control-lg mx-auto" type="file" id="file" name="file" accept="image/*" capture="environment" required style="max-width: 500px;">
-                                    <div class="form-text mt-2 text-muted small">Compatible con cámaras móviles (Android / iOS / Tablets). El motor ajustará el análisis según el material visualizado.</div>
+                                    <!-- Input visible para el usuario -->
+                                    <input class="form-control form-control-lg mx-auto" type="file" id="fileInput" accept="image/*" capture="environment" required style="max-width: 500px;">
+                                    
+                                    <!-- Input oculto que viaja a Flask con la imagen ya optimizada -->
+                                    <input type="hidden" id="image_base64" name="image_base64">
+                                    
+                                    <div class="form-text mt-2 text-muted small">Optimización automática para conexiones móviles activada.</div>
                                 </div>
                                 <div class="d-grid">
                                     <button type="submit" id="btnAnalizar" class="btn btn-custom btn-lg text-white">
-                                        <i class="fas fa-atom me-2"></i>Ejecutar Diagnóstico Geológico y Técnico con Gemini
+                                        <i class="fas fa-atom me-2"></i>Ejecutar Diagnóstico Geológico con Gemini
                                     </button>
                                 </div>
                             </form>
 
-                            <!-- Sección de Resultados Recientes -->
+                            <!-- Resultados -->
                             {% if resultado %}
                             <div class="result-box mt-4">
                                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
@@ -239,11 +244,11 @@ HTML_TEMPLATE = """
                         </div>
                     </div>
 
-                    <!-- PESTAÑA 2: HISTORIAL DE ENSAYOS -->
+                    <!-- PESTAÑA 2: HISTORIAL -->
                     <div class="tab-pane fade" id="pills-historial" role="tabpanel">
                         <div class="card p-4 p-md-5">
                             <h3 class="text-dark fw-bold mb-3"><i class="fas fa-archive text-primary me-2"></i>Historial Resguardado de Ensayos</h3>
-                            <p class="text-muted small mb-4">Registro cronológico permanente de todos los reportes, solicitudes e imágenes procesadas por el Directorio de GRAVAFILT S.A.</p>
+                            <p class="text-muted small mb-4">Registro cronológico permanente de los reportes procesados.</p>
                             
                             {% if historial and historial|length > 0 %}
                                 <div class="list-group">
@@ -256,7 +261,7 @@ HTML_TEMPLATE = """
                                         <div class="row align-items-center g-3">
                                             <div class="col-auto">
                                                 {% if item.imagen %}
-                                                    <img src="data:image/jpeg;base64,{{ item.imagen }}" alt="Muestra analizada" class="historial-img shadow-sm" title="Imagen de muestra analizada">
+                                                    <img src="data:image/jpeg;base64,{{ item.imagen }}" alt="Muestra" class="historial-img shadow-sm">
                                                 {% else %}
                                                     <div class="historial-img bg-light d-flex align-items-center justify-content-center text-muted small">Sin imagen</div>
                                                 {% endif %}
@@ -279,18 +284,18 @@ HTML_TEMPLATE = """
                         </div>
                     </div>
 
-                    <!-- PESTAÑA 3: TRAZABILIDAD Y ORIGEN -->
+                    <!-- PESTAÑA 3: TRAZABILIDAD -->
                     <div class="tab-pane fade" id="pills-trazabilidad" role="tabpanel">
                         <div class="card p-4 p-md-5">
                             <h3 class="text-dark fw-bold mb-3"><i class="fas fa-map-marked-alt text-primary me-2"></i>Origen, Trazabilidad y Marco Geológico</h3>
-                            <p class="text-muted mb-4">Información institucional sobre la procedencia de los áridos extraídos en cuencas de río y procesados bajo normas rigurosas.</p>
+                            <p class="text-muted mb-4">Información institucional sobre la procedencia de los áridos extraídos en cuencas fluviales.</p>
                             
                             <div class="row g-4">
                                 <div class="col-md-6">
                                     <div class="p-4 border rounded-3 bg-light h-100">
                                         <h5 class="text-dark fw-bold mb-3"><i class="fas fa-water text-info me-2"></i>Extracción y Cuencas</h5>
                                         <p class="text-secondary small" style="line-height: 1.6;">
-                                            Los materiales procesados por GRAVAFILT S.A. provienen de extracciones fluviales controladas, bajo estrictas pautas de sustentabilidad ambiental y normativas provinciales. Cada banco de arena o grava presenta cualidades organolépticas específicas de origen aluvial, con composición cuarzosa predominante y ausencia de impurezas orgánicas perjudiciales para la industria del hormigón y filtración.
+                                            Materiales procesados por GRAVAFILT S.A. provenientes de extracciones fluviales controladas, bajo estrictas pautas de sustentabilidad ambiental y normativas provinciales.
                                         </p>
                                     </div>
                                 </div>
@@ -298,7 +303,7 @@ HTML_TEMPLATE = """
                                     <div class="p-4 border rounded-3 bg-light h-100">
                                         <h5 class="text-dark fw-bold mb-3"><i class="fas fa-certificate text-warning me-2"></i>Garantía de Accionistas</h5>
                                         <p class="text-secondary small" style="line-height: 1.6;">
-                                            Operado bajo la supervisión directa del Directorio (Usuario <strong>lsantiago</strong>). Este repositorio garantiza doble capa de seguridad, asegurando que los reportes físico-químicos, granulométricos y el módulo de finura validado por Gemini IA constituyan un respaldo técnico fehaciente ante clientes corporativos y petroleros.
+                                            Supervisado directamente por el Directorio (Usuario <strong>lsantiago</strong>), garantizando doble capa de seguridad y respaldo técnico ante clientes corporativos.
                                         </p>
                                     </div>
                                 </div>
@@ -312,11 +317,51 @@ HTML_TEMPLATE = """
         </div>
     </div>
 
-    <!-- Script de animación fluida -->
+    <!-- Script de compresión móvil automática para evitar HTTP 502 -->
     <script>
-        function mostrarCarga(event) {
+        function procesarYEnviar(event) {
+            event.preventDefault();
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) return;
+
             document.getElementById('loadingOverlay').style.display = 'flex';
             document.getElementById('btnAnalizar').disabled = true;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    // Redimensionar si supera los 1200px para garantizar subida fluida en celulares
+                    const MAX_DIM = 1200;
+                    if (width > height && width > MAX_DIM) {
+                        height *= MAX_DIM / width;
+                        width = MAX_DIM;
+                    } else if (height > MAX_DIM) {
+                        width *= MAX_DIM / height;
+                        height = MAX_DIM;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Comprimir a JPEG con calidad 0.85
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                    const base64Data = dataUrl.split(',')[1];
+                    
+                    document.getElementById('image_base64').value = base64Data;
+                    document.getElementById('analisisForm').submit();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
         }
     </script>
 
@@ -448,13 +493,12 @@ def index():
         session["historial"] = []
 
     if request.method == "POST":
-        file = request.files.get('file')
-        if not file or file.filename == '':
-            error = "No se ha seleccionado ningún archivo o imagen."
+        img_base64 = request.form.get('image_base64')
+        if not img_base64:
+            error = "No se pudo procesar la imagen desde el dispositivo móvil."
         else:
             try:
-                image_bytes = file.read()
-                img_base64 = base64.b64encode(image_bytes).decode('utf-8')
+                image_bytes = base64.b64decode(img_base64)
                 
                 prompt = (
                     "Actúa con rigor absoluto como Ingeniero Geotécnico, Geólogo y Jefe de Control de Calidad de plantas de áridos (GRAVAFILT S.A.). "
@@ -475,7 +519,7 @@ def index():
                 for intento in range(max_intentos):
                     try:
                         response = client.models.generate_content(
-                            model='gemini-3.6-flash',
+                            model='gemini-2.5-flash',
                             contents=[
                                 types.Part.from_bytes(
                                     data=image_bytes,
@@ -488,7 +532,7 @@ def index():
                         break
                     except Exception as api_err:
                         if intento < max_intentos - 1:
-                            time.sleep(4 * (intento + 1))
+                            time.sleep(3 * (intento + 1))
                             continue
                         raise api_err
 
@@ -504,7 +548,7 @@ def index():
                     session.modified = True
 
             except Exception as e:
-                error = f"Error temporal de pasarela o saturación en los servidores de la API (503 / Alta Demanda). El sistema intentó reconectar automáticamente pero persistió la congestión. Por favor, reintente en unos segundos: {str(e)}"
+                error = f"Error de conexión con la pasarela o servidores. La transferencia desde el celular excedió el tiempo o sufrió una interrupción de red: {str(e)}"
 
     return render_template_string(
         HTML_TEMPLATE, 
