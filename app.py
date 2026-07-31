@@ -10,17 +10,17 @@ from google.genai import types
 # CONFIGURACIÓN GENERAL BLINDADA
 # ==========================================
 app = Flask(__name__)
-app.secret_key = "gravafilt_secret_key_2026_production_secure"
+app.secret_key = "gravafilt_secret_key_2026_production_modular"
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # Sesión firme por 24 horas
 
-# Inicialización segura del cliente con timeout extendido
+# Inicialización segura del cliente con timeout optimizado
 api_key_val = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key_val, http_options={'timeout': 300000})
 
 
 # ==========================================
-# PLANTILLA HTML / CSS / JAVASCRIPT PRINCIPAL
+# PLANTILLA HTML / CSS / JAVASCRIPT MODULAR
 # ==========================================
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -28,7 +28,7 @@ HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GRAVAFILT S.A. | Dirección y Control de Calidad Geológica y Áridos</title>
+    <title>GRAVAFILT S.A. | Directorio Geotécnico Modular</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -63,6 +63,21 @@ HTML_TEMPLATE = """
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
         }
+        .btn-success-custom {
+            background: linear-gradient(135deg, #059669, #047857);
+            border: none;
+            border-radius: 50px;
+            padding: 14px 30px;
+            font-weight: 600;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .btn-success-custom:hover {
+            background: linear-gradient(135deg, #047857, #065f46);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3);
+            color: white;
+        }
         .badge-corp {
             background-color: #0f172a;
             color: #38bdf8;
@@ -79,7 +94,6 @@ HTML_TEMPLATE = """
             border-radius: 12px;
             margin-top: 25px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.04);
-            overflow-x: auto;
             display: none;
         }
         .result-box table {
@@ -105,7 +119,7 @@ HTML_TEMPLATE = """
         .result-box tr:nth-child(even) {
             background-color: #f8fafc;
         }
-        #loadingOverlay {
+        .loading-overlay {
             position: absolute;
             top: 0;
             left: 0;
@@ -134,12 +148,11 @@ HTML_TEMPLATE = """
             color: #475569;
             font-weight: 500;
         }
-        .historial-img {
-            width: 80px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: 8px;
+        .thumb-muestra {
+            max-height: 200px;
+            border-radius: 10px;
             border: 1px solid #cbd5e1;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
     </style>
 </head>
@@ -148,10 +161,10 @@ HTML_TEMPLATE = """
     <nav class="navbar navbar-dark shadow-sm py-3 navbar-top">
         <div class="container d-flex justify-content-between align-items-center">
             <a class="navbar-brand fw-bold fs-6 fs-md-5 text-white" href="/">
-                <i class="fas fa-mountain me-2 text-warning"></i>GRAVAFILT S.A. <span class="text-info fs-7 d-block d-md-inline">| Panel de Directorio y Control Técnico</span>
+                <i class="fas fa-mountain me-2 text-warning"></i>GRAVAFILT S.A. <span class="text-info fs-7 d-block d-md-inline">| Arquitectura Modular por Micrositios</span>
             </a>
             <div class="d-flex align-items-center gap-3">
-                <span class="badge-corp d-none d-md-inline-block"><i class="fas fa-shield-alt me-1"></i> ACCESO DIRECTORIO: LSANTIAGO</span>
+                <span class="badge-corp d-none d-md-inline-block"><i class="fas fa-shield-alt me-1"></i> DIRECTORIO: LSANTIAGO</span>
                 <a href="/logout" class="btn btn-outline-light btn-sm rounded-pill px-3"><i class="fas fa-sign-out-alt me-1"></i> Salir</a>
             </div>
         </div>
@@ -163,75 +176,129 @@ HTML_TEMPLATE = """
                 
                 <ul class="nav nav-pills mb-4 justify-content-center bg-white p-2 rounded-pill shadow-sm" id="pills-tab" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active rounded-pill px-4" id="pills-analizador-tab" data-bs-toggle="pill" data-bs-target="#pills-analizador" type="button" role="tab">
-                            <i class="fas fa-microscope me-2"></i>Analizador de Muestras IA
+                        <button class="nav-link active rounded-pill px-4" id="pills-modulo1-tab" data-bs-toggle="pill" data-bs-target="#pills-modulo1" type="button" role="tab">
+                            <i class="fas fa-camera-retro me-2"></i>Micrositios 1: Captura y Granulometría
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link rounded-pill px-4" id="pills-modulo2-tab" data-bs-toggle="pill" data-bs-target="#pills-modulo2" type="button" role="tab">
+                            <i class="fas fa-file-contract me-2"></i>Micrositio 2: Reporte Yacimiento & Geotecnia
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link rounded-pill px-4" id="pills-historial-tab" data-bs-toggle="pill" data-bs-target="#pills-historial" type="button" role="tab">
-                            <i class="fas fa-history me-2"></i>Historial de Ensayos <span class="badge bg-primary ms-1" id="contadorHistorial">{{ historial|length if historial else 0 }}</span>
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link rounded-pill px-4" id="pills-trazabilidad-tab" data-bs-toggle="pill" data-bs-target="#pills-trazabilidad" type="button" role="tab">
-                            <i class="fas fa-map-marked-alt me-2"></i>Trazabilidad y Origen
+                            <i class="fas fa-history me-2"></i>Historial Ejecutivo
                         </button>
                     </li>
                 </ul>
 
                 <div class="tab-content" id="pills-tabContent">
                     
-                    <!-- TAB 1: ANALIZADOR -->
-                    <div class="tab-pane fade show active" id="pills-analizador" role="tabpanel">
+                    <!-- MICROSITIO 1: CAPTURA Y CUADRO GRANULOMETRICO -->
+                    <div class="tab-pane fade show active" id="pills-modulo1" role="tabpanel">
                         <div class="card p-4 p-md-5">
                             
-                            <div id="loadingOverlay">
+                            <div id="loadingOverlay1" class="loading-overlay">
                                 <div class="spinner-border text-primary mb-3" role="status" style="width: 3.5rem; height: 3.5rem;"></div>
-                                <h5 class="text-dark fw-bold">Procesando informe geológico institucional...</h5>
-                                <p class="text-muted small text-center px-3">Gemini IA está generando las tablas normativas IRAM/ASTM de forma segura. Si el servidor se satura, reintentará automáticamente.</p>
+                                <h5 class="text-dark fw-bold">Procesando captura y cálculo granulométrico...</h5>
+                                <p class="text-muted small text-center px-3">Gemini AI está ejecutando la lectura óptica inicial de la muestra.</p>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
-                                <h2 class="text-dark fw-bold fs-3 fs-md-2 mb-2 mb-md-0">Laboratorio Geológico Automatizado</h2>
-                                <span class="badge bg-success text-white px-3 py-2 rounded-pill"><i class="fas fa-check-circle me-1"></i> Servidor Producción Activo</span>
+                                <h2 class="text-dark fw-bold fs-3 fs-md-2 mb-2 mb-md-0">Micrositio 1: Carga de Muestra y Cuadro Granulométrico</h2>
+                                <span class="badge bg-primary text-white px-3 py-2 rounded-pill"><i class="fas fa-layer-group me-1"></i> Fase 1 Activa</span>
                             </div>
-                            <p class="text-muted mb-4 small">Seleccione la fotografía de la muestra para emitir el dictamen oficial para el Directorio de GRAVAFILT S.A.</p>
+                            <p class="text-muted mb-4 small">Suba o capture la fotografía de la muestra de árido. El sistema generará el cuadro granulométrico oficial IRAM/ASTM y resguardará la imagen para la Fase 2.</p>
 
-                            <form id="analisisForm" onsubmit="enviarAsync(event)">
+                            <form id="formModulo1" onsubmit="enviarModulo1(event)">
                                 <div class="mb-4 preview-container">
                                     <label for="fileInput" class="form-label fw-semibold text-secondary d-block mb-3">
-                                        <i class="fas fa-camera-retro fa-2x text-primary mb-2 d-block"></i>
-                                        Seleccionar Archivo o Capturar con Cámara:
+                                        <i class="fas fa-camera fa-2x text-primary mb-2 d-block"></i>
+                                        Seleccione Archivo o Capture con Cámara:
                                     </label>
                                     <input class="form-control form-control-lg mx-auto" type="file" id="fileInput" accept="image/*" capture="environment" required style="max-width: 500px;">
-                                    <div class="form-text text-muted mt-2">Formatos admitidos: JPG, PNG, WEBP (Optimización automática integrada).</div>
+                                    <div class="form-text text-muted mt-2">Optimización automática de resolución integrada para evitar congestión de red.</div>
                                 </div>
                                 <div class="d-grid">
-                                    <button type="submit" id="btnAnalizar" class="btn btn-custom btn-lg text-white">
-                                        <i class="fas fa-atom me-2"></i>Ejecutar Diagnóstico Geológico Completo
+                                    <button type="submit" id="btnModulo1" class="btn btn-custom btn-lg text-white">
+                                        <i class="fas fa-calculator me-2"></i>Generar Cuadro Granulométrico y Resguardar Muestra
                                     </button>
                                 </div>
                             </form>
 
-                            <div id="resultadoBox" class="result-box">
+                            <div id="resultadoBox1" class="result-box">
                                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap border-bottom pb-2">
-                                    <h4 class="text-dark fw-bold fs-5 fs-md-4 mb-2 mb-md-0"><i class="fas fa-file-invoice text-success me-2"></i>Informe Técnico Oficial de Laboratorio:</h4>
-                                    <span class="text-muted small fw-semibold" id="timestampTexto"></span>
+                                    <h4 class="text-dark fw-bold fs-5 fs-md-4 mb-2 mb-md-0"><i class="fas fa-table text-success me-2"></i>Cuadro Granulométrico IRAM / ASTM:</h4>
+                                    <span class="text-muted small fw-semibold" id="timestampTexto1"></span>
                                 </div>
-                                <div id="resultadoContenido" class="text-secondary" style="white-space: pre-line; line-height: 1.75; font-size: 0.95rem;"></div>
+                                <div class="text-center mb-3" id="previewContenedorImg"></div>
+                                <div id="resultadoContenido1" class="text-secondary" style="white-space: pre-line; line-height: 1.75; font-size: 0.95rem;"></div>
+                                
+                                <div class="mt-4 p-3 bg-light rounded-3 border text-center">
+                                    <p class="mb-2 fw-semibold text-dark small"><i class="fas fa-arrow-right text-primary me-1"></i> ¿Desea profundizar en las propiedades físicas, yacimiento fluvial y entorno?</p>
+                                    <button class="btn btn-sm btn-outline-primary rounded-pill px-4" onclick="irAModulo2()">Ir a Micrositio 2: Reporte Geotécnico Completo</button>
+                                </div>
                             </div>
 
-                            <div id="errorBox" class="alert alert-danger mt-4 rounded-3 shadow-sm small" style="display: none;" role="alert">
-                                <i class="fas fa-exclamation-triangle me-2"></i><span id="errorTexto"></span>
+                            <div id="errorBox1" class="alert alert-danger mt-4 rounded-3 shadow-sm small" style="display: none;" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i><span id="errorTexto1"></span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- TAB 2: HISTORIAL -->
+                    <!-- MICROSITIO 2: REPORTE PROFESIONAL TECNICO GEOLOGICO Y GEOTECNICO -->
+                    <div class="tab-pane fade" id="pills-modulo2" role="tabpanel">
+                        <div class="card p-4 p-md-5">
+                            
+                            <div id="loadingOverlay2" class="loading-overlay">
+                                <div class="spinner-border text-success mb-3" role="status" style="width: 3.5rem; height: 3.5rem;"></div>
+                                <h5 class="text-dark fw-bold">Generando dictamen geotécnico y de yacimientos fluviales...</h5>
+                                <p class="text-muted small text-center px-3">Gemini AI está analizando las propiedades físico-químicas, ubicación en lecho de río (costa vs canal medio) y comportamientos en destino.</p>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                                <h2 class="text-dark fw-bold fs-3 fs-md-2 mb-2 mb-md-0">Micrositio 2: Reporte Profesional Técnico Geológico y Geotécnico</h2>
+                                <span class="badge bg-success text-white px-3 py-2 rounded-pill"><i class="fas fa-search-location me-1"></i> Fase 2 Especializada</span>
+                            </div>
+                            <p class="text-muted mb-4 small">A partir de la muestra cargada en el Micrositio 1, active este botón para compilar el informe integral de propiedades físico-químicas, comportamiento en destino y trazabilidad en yacimientos de río.</p>
+
+                            <div id="avisoSinMuestra" class="alert alert-warning rounded-3 shadow-sm" style="display: {% if session.get('current_image') %}none{% else %}block{% endif %};">
+                                <i class="fas fa-exclamation-circle me-2"></i><strong>Atención:</strong> No hay ninguna muestra activa cargada en la sesión. Por favor, realice primero la carga en el <strong>Micrositio 1</strong>.
+                            </div>
+
+                            <div id="panelConMuestra" style="display: {% if session.get('current_image') %}block{% else %}none{% endif %};">
+                                <div class="text-center mb-4">
+                                    <img id="imagenActivaPreview" src="data:image/jpeg;base64,{{ session.get('current_image', '') }}" alt="Muestra Activa" class="thumb-muestra mb-2">
+                                    <div class="text-muted small">Muestra registrada y lista para análisis geotécnico avanzado.</div>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="button" id="btnModulo2" class="btn btn-success-custom btn-lg" onclick="enviarModulo2()">
+                                        <i class="fas fa-file-medical-alt me-2"></i>Generar Reporte Técnico Geológico, Yacimiento y Comportamiento en Destino
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="resultadoBox2" class="result-box" style="display: {% if session.get('current_report') %}block{% else %}none{% endif %}; border-left-color: #059669;">
+                                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap border-bottom pb-2">
+                                    <h4 class="text-dark fw-bold fs-5 fs-md-4 mb-2 mb-md-0"><i class="fas fa-certificate text-success me-2"></i>Dictamen Técnico Oficial de Yacimiento y Geotecnia:</h4>
+                                    <span class="text-muted small fw-semibold" id="timestampTexto2"></span>
+                                </div>
+                                <div id="resultadoContenido2" class="text-secondary" style="white-space: pre-line; line-height: 1.75; font-size: 0.95rem;">
+                                    {{ session.get('current_report', '') }}
+                                </div>
+                            </div>
+
+                            <div id="errorBox2" class="alert alert-danger mt-4 rounded-3 shadow-sm small" style="display: none;" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i><span id="errorTexto2"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- HISTORIAL -->
                     <div class="tab-pane fade" id="pills-historial" role="tabpanel">
                         <div class="card p-4 p-md-5">
-                            <h3 class="text-dark fw-bold mb-3"><i class="fas fa-archive text-primary me-2"></i>Historial Resguardado de Ensayos</h3>
-                            <p class="text-muted small mb-4">Registro cronológico detallado de los análisis geológicos ejecutados durante la sesión.</p>
+                            <h3 class="text-dark fw-bold mb-3"><i class="fas fa-archive text-primary me-2"></i>Historial Ejecutivo de Ensayos</h3>
+                            <p class="text-muted small mb-4">Registro cronológico de auditorías de laboratorio de la sesión.</p>
                             <div id="listaHistorial">
                                 {% if historial and historial|length > 0 %}
                                     <div class="list-group">
@@ -244,14 +311,12 @@ HTML_TEMPLATE = """
                                             <div class="row align-items-center g-3">
                                                 <div class="col-auto">
                                                     {% if item.imagen %}
-                                                        <img src="data:image/jpeg;base64,{{ item.imagen }}" alt="Muestra" class="historial-img shadow-sm">
-                                                    {% else %}
-                                                        <div class="historial-img bg-light d-flex align-items-center justify-content-center text-muted small">Sin imagen</div>
+                                                        <img src="data:image/jpeg;base64,{{ item.imagen }}" alt="Muestra" style="width: 70px; height: 70px; object-fit: cover; border-radius: 6px;">
                                                     {% endif %}
                                                 </div>
                                                 <div class="col">
-                                                    <div class="text-secondary" style="font-size: 0.9rem; max-height: 120px; overflow: hidden; text-overflow: ellipsis;">
-                                                        {{ item.resumen[:350] }}...
+                                                    <div class="text-secondary small" style="max-height: 100px; overflow: hidden; text-overflow: ellipsis;">
+                                                        {{ item.resumen[:300] }}...
                                                     </div>
                                                 </div>
                                             </div>
@@ -261,31 +326,9 @@ HTML_TEMPLATE = """
                                 {% else %}
                                     <div class="text-center py-5 text-muted">
                                         <i class="fas fa-folder-open fa-3x mb-3 text-secondary"></i>
-                                        <p class="fw-semibold">Aún no se han registrado ensayos en esta sesión.</p>
+                                        <p class="fw-semibold">Aún no se han registrado ensayos institucionales en esta sesión.</p>
                                     </div>
                                 {% endif %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- TAB 3: TRAZABILIDAD -->
-                    <div class="tab-pane fade" id="pills-trazabilidad" role="tabpanel">
-                        <div class="card p-4 p-md-5">
-                            <h3 class="text-dark fw-bold mb-3"><i class="fas fa-map-marked-alt text-primary me-2"></i>Origen, Trazabilidad y Marco Geológico</h3>
-                            <p class="text-muted small mb-4">Información corporativa y de cuencas de extracción operadas por GRAVAFILT S.A.</p>
-                            <div class="row g-4">
-                                <div class="col-md-6">
-                                    <div class="p-4 border rounded-3 bg-light h-100">
-                                        <h5 class="text-dark fw-bold mb-3"><i class="fas fa-water text-info me-2"></i>Extracción y Cuencas</h5>
-                                        <p class="text-secondary small">Materiales procesados por GRAVAFILT S.A. provenientes de extracciones fluviales controladas.</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="p-4 border rounded-3 bg-light h-100">
-                                        <h5 class="text-dark fw-bold mb-3"><i class="fas fa-certificate text-warning me-2"></i>Garantía de Directorio</h5>
-                                        <p class="text-secondary small">Supervisado directamente por el Directorio ejecutivo (Usuario: <strong>lsantiago</strong>).</p>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -296,18 +339,24 @@ HTML_TEMPLATE = """
         </div>
     </div>
 
-    <!-- Script AJAX robusto con control de errores detallado -->
+    <!-- Script de control modular asíncrono -->
     <script>
-        function enviarAsync(event) {
+        function irAModulo2() {
+            const triggerTab = document.querySelector('#pills-modulo2-tab');
+            const tabObj = new bootstrap.Tab(triggerTab);
+            tabObj.show();
+        }
+
+        function enviarModulo1(event) {
             event.preventDefault();
             const fileInput = document.getElementById('fileInput');
             const file = fileInput.files[0];
             if (!file) return;
 
-            document.getElementById('loadingOverlay').style.display = 'flex';
-            document.getElementById('btnAnalizar').disabled = true;
-            document.getElementById('errorBox').style.display = 'none';
-            document.getElementById('resultadoBox').style.display = 'none';
+            document.getElementById('loadingOverlay1').style.display = 'flex';
+            document.getElementById('btnModulo1').disabled = true;
+            document.getElementById('errorBox1').style.display = 'none';
+            document.getElementById('resultadoBox1').style.display = 'none';
 
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -316,7 +365,7 @@ HTML_TEMPLATE = """
                     const canvas = document.createElement('canvas');
                     let width = img.width;
                     let height = img.height;
-                    const MAX_DIM = 900;
+                    const MAX_DIM = 850; // Óptimo para respuesta instantánea sin timeouts
                     if (width > height && width > MAX_DIM) {
                         height *= MAX_DIM / width;
                         width = MAX_DIM;
@@ -329,9 +378,9 @@ HTML_TEMPLATE = """
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    const base64Data = canvas.toDataURL('image/jpeg', 0.75).split(',')[1];
+                    const base64Data = canvas.toDataURL('image/jpeg', 0.72).split(',')[1];
 
-                    fetch('/analizar-ajax', {
+                    fetch('/analizar-granulometria', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ image_base64: base64Data })
@@ -339,38 +388,81 @@ HTML_TEMPLATE = """
                     .then(async response => {
                         const textData = await response.text();
                         try {
-                            const jsonData = JSON.parse(textData);
-                            return { ok: response.ok, data: jsonData };
-                        } catch (parseErr) {
-                            throw new Error("El servidor interrumpió la conexión o excedió el tiempo límite (Timeout/502). Detalle: " + textData.substring(0, 100));
+                            return { ok: response.ok, data: JSON.parse(textData) };
+                        } catch (err) {
+                            throw new Error("El servidor excedió el tiempo límite (Timeout/502). Detalle: " + textData.substring(0, 100));
                         }
                     })
                     .then(resObj => {
-                        document.getElementById('loadingOverlay').style.display = 'none';
-                        document.getElementById('btnAnalizar').disabled = false;
+                        document.getElementById('loadingOverlay1').style.display = 'none';
+                        document.getElementById('btnModulo1').disabled = false;
 
                         if (!resObj.ok || resObj.data.error) {
-                            document.getElementById('errorTexto').innerText = resObj.data.error || "Error desconocido en el servidor.";
-                            document.getElementById('errorBox').style.display = 'block';
+                            document.getElementById('errorTexto1').innerText = resObj.data.error || "Error en servidor.";
+                            document.getElementById('errorBox1').style.display = 'block';
                         } else {
-                            document.getElementById('resultadoContenido').innerText = resObj.data.resultado;
-                            document.getElementById('timestampTexto').innerText = "Emitido: " + resObj.data.timestamp;
-                            document.getElementById('resultadoBox').style.display = 'block';
-                            if (resObj.data.contador) {
-                                document.getElementById('contadorHistorial').innerText = resObj.data.contador;
-                            }
+                            document.getElementById('resultadoContenido1').innerText = resObj.data.resultado;
+                            document.getElementById('timestampTexto1').innerText = "Emitido: " + resObj.data.timestamp;
+                            
+                            // Mostrar vista previa de imagen en resultado
+                            document.getElementById('previewContenedorImg').innerHTML = `<img src="data:image/jpeg;base64,${base64Data}" alt="Muestra analizada" class="thumb-muestra">`;
+                            document.getElementById('resultadoBox1').style.display = 'block';
+
+                            // Habilitar visualmente el módulo 2
+                            document.getElementById('avisoSinMuestra').style.display = 'none';
+                            document.getElementById('panelConMuestra').style.display = 'block';
+                            document.getElementById('imagenActivaPreview').src = `data:image/jpeg;base64,${base64Data}`;
                         }
                     })
                     .catch(err => {
-                        document.getElementById('loadingOverlay').style.display = 'none';
-                        document.getElementById('btnAnalizar').disabled = false;
-                        document.getElementById('errorTexto').innerText = err.message;
-                        document.getElementById('errorBox').style.display = 'block';
+                        document.getElementById('loadingOverlay1').style.display = 'none';
+                        document.getElementById('btnModulo1').disabled = false;
+                        document.getElementById('errorTexto1').innerText = err.message;
+                        document.getElementById('errorBox1').style.display = 'block';
                     });
                 };
                 img.src = e.target.result;
             };
             reader.readAsDataURL(file);
+        }
+
+        function enviarModulo2() {
+            document.getElementById('loadingOverlay2').style.display = 'flex';
+            document.getElementById('btnModulo2').disabled = true;
+            document.getElementById('errorBox2').style.display = 'none';
+
+            fetch('/generar-reporte-geotecnico', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            })
+            .then(async response => {
+                const textData = await response.text();
+                try {
+                    return { ok: response.ok, data: JSON.parse(textData) };
+                } catch (err) {
+                    throw new Error("El servidor excedió el tiempo límite en reporte geotécnico (Timeout/502). Detalle: " + textData.substring(0, 100));
+                }
+            })
+            .then(resObj => {
+                document.getElementById('loadingOverlay2').style.display = 'none';
+                document.getElementById('btnModulo2').disabled = false;
+
+                if (!resObj.ok || resObj.data.error) {
+                    document.getElementById('errorTexto2').innerText = resObj.data.error || "Error al procesar reporte geotécnico.";
+                    document.getElementById('errorBox2').style.display = 'block';
+                } else {
+                    document.getElementById('resultadoContenido2').innerText = resObj.data.resultado;
+                    document.getElementById('timestampTexto2').innerText = "Emitido: " + resObj.data.timestamp;
+                    document.getElementById('resultadoBox2').style.display = 'block';
+                }
+            })
+            .catch(err => {
+                document.getElementById('loadingOverlay2').style.display = 'none';
+                document.getElementById('btnModulo2').disabled = false;
+                document.getElementById('errorTexto2').innerText = err.message;
+                document.getElementById('errorBox2').style.display = 'block';
+            });
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -413,7 +505,7 @@ LOGIN_TEMPLATE = """
 
 
 # ==========================================
-# RUTAS Y CONTROLADORES SEGURIZADOS
+# RUTAS Y CONTROLADORES MODULARES
 # ==========================================
 
 @app.route("/login", methods=["GET", "POST"])
@@ -444,54 +536,85 @@ def index():
     return render_template_string(HTML_TEMPLATE, historial=session.get("historial", []))
 
 
-@app.route("/analizar-ajax", methods=["POST"])
-def analizar_ajax():
+@app.route("/analizar-granulometria", methods=["POST"])
+def analizar_granulometria():
     if not session.get("authenticated"):
-        return jsonify({"error": "Su sesión ha caducado. Vuelva a iniciar sesión en la plataforma."}), 401
+        return jsonify({"error": "Su sesión ha caducado. Vuelva a iniciar sesión."}), 401
 
     data = request.get_json()
     if not data or 'image_base64' not in data:
-        return jsonify({"error": "No se ha recibido la estructura de la imagen de muestra."}), 400
+        return jsonify({"error": "No se ha recibido la imagen de la muestra."}), 400
 
     try:
-        image_bytes = base64.b64decode(data.get('image_base64'))
+        img_b64 = data.get('image_base64')
+        image_bytes = base64.b64decode(img_b64)
         timestamp_actual = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-        prompt = (
-            "Actúa como Ingeniero Geotécnico Jefe de GRAVAFILT S.A. "
-            "Analiza con rigurosidad técnica la imagen de la muestra de árido y emite un informe exhaustivo estructurado exactamente en los siguientes 6 puntos:\n\n"
-            "1. **Caracterización Geológica, Mineralógica y Fisotécnica:** Clasificación visual precisa, morfología de las partículas (angulosas/subredondeadas), grado de esfericidad, estimación mineralógica principal (cuarzo, feldespatos) y detección de finos o arcillas superficiales.\n"
-            "2. **Cualidades Organolépticas y Condiciones Físico-Químicas:** Textura, grado de limpieza, ausencia de materia orgánica y comportamiento esperado ante agentes externos.\n"
-            "3. **Origen y Trazabilidad de Extracción:** Referencia analítica sobre el banco fluvial de río y su aptitud industrial para operaciones en planta.\n"
-            "4. **Cuadro Granulométrico Oficial (Norma de Laboratorio IRAM / ASTM):** Tabla formal en Markdown que incluya obligatoriamente las columnas: Tamiz (mm), % Retenido Parcial, % Retenido Acumulado y % Pasante Acumulado.\n"
-            "5. **Parámetros Estadísticos del Ensayo:** Cálculo técnico detallado del Módulo de Finura (MF) y del Tamaño Máximo Nominal (TMN).\n"
-            "6. **Dictamen de Calidad, Operativa y Uso Industrial:** Conclusión formal del Directorio sobre su aplicación en hormigones, construcción o filtración, incluyendo sugerencias de ajuste en planta."
+        # Guardar en la sesión para el Micrositio 2
+        session["current_image"] = img_b64
+
+        prompt_fase1 = (
+            "Actúa como Ingeniero de Laboratorio de GRAVAFILT S.A. "
+            "Examina la imagen de la muestra de árido y genera estrictamente:\n\n"
+            "1. **Clasificación Visual Preliminar de Partículas:** Morfología (angulosas, subredondeadas), esfericidad y estimación mineralógica principal.\n"
+            "2. **Cuadro Granulométrico Oficial (Norma IRAM / ASTM):** Tabla en Markdown con columnas obligatorias: Tamiz (mm), % Retenido Parcial, % Retenido Acumulado y % Pasante Acumulado.\n"
+            "3. **Parámetros Estadísticos:** Módulo de Finura (MF) y Tamaño Máximo Nominal (TMN)."
         )
 
-        # Mecanismo de reintentos automáticos (Backoff exponencial) ante errores 503 / UNAVAILABLE
-        max_intentos = 4
-        reintentos_delay = 3
-        response = None
-
-        for intento in range(max_intentos):
-            try:
-                response = client.models.generate_content(
-                    model='gemini-3.6-flash',
-                    contents=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"), prompt]
-                )
-                break
-            except Exception as api_err:
-                err_str = str(api_err)
-                if ("503" in err_str or "UNAVAILABLE" in err_str or "overloaded" in err_str) and intento < max_intentos - 1:
-                    time.sleep(reintentos_delay)
-                    reintentos_delay *= 2  # Duplica el tiempo de espera progresivamente
-                    continue
-                else:
-                    raise api_err
+        response = client.models.generate_content(
+            model='gemini-3.6-flash',
+            contents=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"), prompt_fase1]
+        )
 
         resultado = response.text
+        session["current_report_fase1"] = resultado
 
-        nuevo_reporte = {"fecha": timestamp_actual, "resumen": resultado, "imagen": data.get('image_base64')}
+        return jsonify({
+            "resultado": resultado,
+            "timestamp": timestamp_actual
+        })
+
+    except Exception as e:
+        return jsonify({"error": f"Fallo al procesar granulometría: {str(e)}"}), 500
+
+
+@app.route("/generar-reporte-geotecnico", methods=["POST"])
+def generar_reporte_geotecnico():
+    if not session.get("authenticated"):
+        return jsonify({"error": "Su sesión ha caducado. Vuelva a iniciar sesión."}), 401
+
+    img_b64 = session.get("current_image")
+    if not img_b64:
+        return jsonify({"error": "No hay ninguna imagen cargada en la sesión. Cargue una muestra en el Micrositio 1 primero."}), 400
+
+    try:
+        image_bytes = base64.b64decode(img_b64)
+        timestamp_actual = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+        prompt_fase2 = (
+            "Actúa como Ingeniero Geotécnico Jefe y Director de Operaciones de Yacimientos de GRAVAFILT S.A. "
+            "Basándote en las características visuales y mineralógicas de la muestra de árido provista en imagen, redacta un REPORTE TÉCNICO PROFESIONAL estructurado exactamente en los siguientes 5 puntos:\n\n"
+            "1. **Propiedades Físico-Químicas de los Materiales:** Análisis detallado de densidad real y aparente estimada, porosidad, absorción y resistencia a la alteración o abrasión superficial según su composición.\n"
+            "2. **Ubicación Aproximada de Extracción en Yacimientos Fluviales de Río:** Deducción experta según la granulometría y selección visual: ¿El material proviene de zonas de orilla/costa (banco marginal con mayor presencia de limos o arenas finas) o del canal medio de corriente rápida (rodado limpio, mayor esfericidad y cantos rodados seleccionados)? Justifíquese técnicamente.\n"
+            "3. **Cualidades Organolépticas y Limpieza:** Descripción de textura táctil y visual, ausencia o presencia de materia orgánica, películas arcillosas o contaminantes reactivos.\n"
+            "4. **Comportamiento en Actividades de Destino (Aplicaciones Industriales):** Desempeño y compatibilidad técnica esperada para su uso en hormigones estructurales, pavimentación vial, sistemas de filtración industrial o capas de base granular.\n"
+            "5. **Explicaciones Relativas al Entorno y Encuadrado Granulométrico Regional:** Contextualización geomorfológica del material dentro de cuencas sedimentarias fluviales (ej. cuenca hidrológica regional), evaluando su comportamiento frente al desgaste hídrico y sugerencias de tratamiento en planta."
+        )
+
+        response = client.models.generate_content(
+            model='gemini-3.6-flash',
+            contents=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"), prompt_fase2]
+        )
+
+        resultado = response.text
+        session["current_report"] = resultado
+
+        # Guardar en el historial de sesión
+        nuevo_reporte = {
+            "fecha": timestamp_actual, 
+            "resumen": session.get("current_report_fase1", "") + "\n\n" + resultado, 
+            "imagen": img_b64
+        }
         hist = session.get("historial", [])
         hist.insert(0, nuevo_reporte)
         session["historial"] = hist
@@ -499,12 +622,11 @@ def analizar_ajax():
 
         return jsonify({
             "resultado": resultado,
-            "timestamp": timestamp_actual,
-            "contador": len(hist)
+            "timestamp": timestamp_actual
         })
 
     except Exception as e:
-        return jsonify({"error": f"Fallo al procesar el ensayo geológico: {str(e)}"}), 500
+        return jsonify({"error": f"Fallo al generar reporte geotécnico: {str(e)}"}), 500
 
 
 if __name__ == "__main__":
