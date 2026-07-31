@@ -8,11 +8,11 @@ from google.genai import types
 
 app = Flask(__name__)
 app.secret_key = "gravafilt_secret_key_2026_secure"
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Límite seguro de subida de 16MB
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
 
 api_key_val = os.environ.get("GEMINI_API_KEY")
 
-# Cliente configurado con timeout robusto de 120 segundos
+# Cliente configurado con timeout máximo
 client = genai.Client(
     api_key=api_key_val,
     http_options={'timeout': 120000} 
@@ -25,7 +25,6 @@ HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>GRAVAFILT S.A. | Dirección y Control de Calidad Geológica y Áridos</title>
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -146,7 +145,6 @@ HTML_TEMPLATE = """
 </head>
 <body>
 
-    <!-- Barra de Navegación Institucional -->
     <nav class="navbar navbar-dark shadow-sm py-3 navbar-top">
         <div class="container d-flex justify-content-between align-items-center">
             <a class="navbar-brand fw-bold fs-6 fs-md-5 text-white text-wrap" href="/">
@@ -159,12 +157,10 @@ HTML_TEMPLATE = """
         </div>
     </nav>
 
-    <!-- Contenido Principal -->
     <div class="container my-4 my-md-5">
         <div class="row justify-content-center">
             <div class="col-lg-11">
                 
-                <!-- Pestañas de Navegación -->
                 <ul class="nav nav-pills mb-4 justify-content-center bg-white p-2 rounded-pill shadow-sm" id="pills-tab" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active rounded-pill px-4" id="pills-analizador-tab" data-bs-toggle="pill" data-bs-target="#pills-analizador" type="button" role="tab">
@@ -185,24 +181,22 @@ HTML_TEMPLATE = """
 
                 <div class="tab-content" id="pills-tabContent">
                     
-                    <!-- PESTAÑA 1: ANALIZADOR -->
                     <div class="tab-pane fade show active" id="pills-analizador" role="tabpanel">
                         <div class="card p-4 p-md-5">
                             
-                            <!-- Capa de Carga Interna -->
                             <div id="loadingOverlay">
                                 <div class="spinner-border text-primary mb-3" role="status" style="width: 3.5rem; height: 3.5rem;">
                                     <span class="visually-hidden">Procesando...</span>
                                 </div>
-                                <h5 class="text-dark fw-bold">Optimizando y analizando muestra...</h5>
-                                <p class="text-muted small text-center px-3">Gemini IA está evaluando granulometría, mineralogía y tablas IRAM/ASTM. Aguarde unos segundos.</p>
+                                <h5 class="text-dark fw-bold">Procesando muestra y generando informe...</h5>
+                                <p class="text-muted small text-center px-3">Gemini IA está calculando granulometría y parámetros físico-químicos. Por favor, no recargue la página.</p>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
                                 <h2 class="text-dark fw-bold fs-3 fs-md-2 mb-2 mb-md-0">Laboratorio Geológico Automatizado</h2>
                                 <span class="badge bg-success text-white px-3 py-2 rounded-pill"><i class="fas fa-check-circle me-1"></i> Sistema Cloud Conectado</span>
                             </div>
-                            <p class="text-muted mb-4 small fs-md-6">Suba un archivo o active directamente la cámara de su celular o tablet. Las imágenes grandes se comprimen automáticamente para evitar errores de red.</p>
+                            <p class="text-muted mb-4 small fs-md-6">Suba una foto de la muestra o capture con la cámara de su dispositivo móvil.</p>
 
                             <form id="analisisForm" method="POST" enctype="multipart/form-data" onsubmit="procesarYEnviar(event)">
                                 <div class="mb-4 preview-container">
@@ -212,7 +206,7 @@ HTML_TEMPLATE = """
                                     </label>
                                     <input class="form-control form-control-lg mx-auto" type="file" id="fileInput" accept="image/*" capture="environment" required style="max-width: 500px;">
                                     <input type="hidden" id="image_base64" name="image_base64">
-                                    <div class="form-text mt-2 text-muted small">Optimización automática para conexiones móviles activada.</div>
+                                    <div class="form-text mt-2 text-muted small">Compresión automática integrada para evitar saturación de red.</div>
                                 </div>
                                 <div class="d-grid">
                                     <button type="submit" id="btnAnalizar" class="btn btn-custom btn-lg text-white">
@@ -221,7 +215,6 @@ HTML_TEMPLATE = """
                                 </div>
                             </form>
 
-                            <!-- Resultados -->
                             {% if resultado %}
                             <div class="result-box mt-4">
                                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
@@ -240,7 +233,6 @@ HTML_TEMPLATE = """
                         </div>
                     </div>
 
-                    <!-- PESTAÑA 2: HISTORIAL -->
                     <div class="tab-pane fade" id="pills-historial" role="tabpanel">
                         <div class="card p-4 p-md-5">
                             <h3 class="text-dark fw-bold mb-3"><i class="fas fa-archive text-primary me-2"></i>Historial Resguardado de Ensayos</h3>
@@ -280,7 +272,6 @@ HTML_TEMPLATE = """
                         </div>
                     </div>
 
-                    <!-- PESTAÑA 3: TRAZABILIDAD -->
                     <div class="tab-pane fade" id="pills-trazabilidad" role="tabpanel">
                         <div class="card p-4 p-md-5">
                             <h3 class="text-dark fw-bold mb-3"><i class="fas fa-map-marked-alt text-primary me-2"></i>Origen, Trazabilidad y Marco Geológico</h3>
@@ -313,7 +304,6 @@ HTML_TEMPLATE = """
         </div>
     </div>
 
-    <!-- Script de compresión móvil automática -->
     <script>
         function procesarYEnviar(event) {
             event.preventDefault();
@@ -333,7 +323,8 @@ HTML_TEMPLATE = """
                     let width = img.width;
                     let height = img.height;
                     
-                    const MAX_DIM = 1200;
+                    // Resolución optimizada para evitar sobrecarga y errores 502 de Cloudflare
+                    const MAX_DIM = 1000;
                     if (width > height && width > MAX_DIM) {
                         height *= MAX_DIM / width;
                         width = MAX_DIM;
@@ -347,7 +338,7 @@ HTML_TEMPLATE = """
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.80);
                     const base64Data = dataUrl.split(',')[1];
                     
                     document.getElementById('image_base64').value = base64Data;
@@ -358,8 +349,6 @@ HTML_TEMPLATE = """
             reader.readAsDataURL(file);
         }
     </script>
-
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
@@ -494,22 +483,19 @@ def index():
             try:
                 image_bytes = base64.b64decode(img_base64)
                 
+                # Prompt optimizado para garantizar respuestas veloces y evitar bloqueos de pasarela
                 prompt = (
-                    "Actúa con rigor absoluto como Ingeniero Geotécnico, Geólogo y Jefe de Control de Calidad de plantas de áridos (GRAVAFILT S.A.). "
-                    "Analiza con extremo detalle técnico la fotografía provista de la muestra de material (arena o grava), contemplando que ante distintos materiales hay distintos análisis específicos de IA. "
-                    "Tu informe de laboratorio autónomo, técnico y geológico debe contener estrictamente lo siguiente:\n\n"
-                    "1. **Caracterización Geológica, Mineralógica y Fisotécnica:** Clasificación visual precisa del árido (origen aluvial/fluvial), morfología de las partículas (angulosas, subredondeadas, esfericidad), estimación de mineralogía predominante (ej. cuarzo, feldespatos) y ausencia o presencia de material limoso/arcilloso o finos.\n"
-                    "2. **Cualidades Organolépticas y Condiciones Físico-Químicas:** Descripción detallada de color, textura superficial, limpieza, ausencia de materia orgánica y comportamiento físico-químico esperado ante agentes agresivos.\n"
-                    "3. **Origen y Trazabilidad de Extracción:** Referencia analítica sobre el probable banco de extracción fluvial de río y su aptitud industrial.\n"
-                    "4. **Cuadro Granulométrico Oficial (Norma de Laboratorio IRAM / ASTM):** "
-                    "Construye una tabla formateada en Markdown clara y rigurosa que contenga exactamente estas columnas:\n"
-                    "   | Tamiz / Malla | Abertura (mm) | % Retenido Parcial | % Retenido Acumulado | % Pasante Acumulado |\n"
-                    "   Utiliza la serie estándar completa correspondiente al material analizado (ej: 9.5 mm, 4.75 mm, 2.36 mm, 1.18 mm, 0.600 mm, 0.300 mm, 0.150 mm, Fondo).\n"
-                    "5. **Parámetros Estadísticos del Ensayo:** Estimación técnica rigurosa del Módulo de Finura (MF) y Tamaño Máximo Nominal (TMN).\n"
-                    "6. **Dictamen de Calidad, Operativa y Uso Industrial:** Conclusión técnica formal firmada por el Directorio sobre la aptitud del material para hormigones estructurales, construcción o filtración industrial, detallando las acciones correctivas o ajustes necesarios en la línea de clasificación de la planta."
+                    "Actúa como Ingeniero Geotécnico Jefe de GRAVAFILT S.A. "
+                    "Analiza la imagen de la muestra de árido y emite un informe técnico preciso y estructurado en:\n\n"
+                    "1. **Caracterización Geológica y Mineralógica:** Clasificación del árido (origen fluvial), morfología de partículas (angulosas/subredondeadas), esfericidad y estimación mineralógica (cuarzo, feldespatos) o presencia de finos.\n"
+                    "2. **Cualidades Físico-Químicas:** Textura superficial, limpieza y ausencia de materia orgánica.\n"
+                    "3. **Origen y Trazabilidad:** Aptitud industrial para extracción fluvial.\n"
+                    "4. **Cuadro Granulométrico (Norma IRAM / ASTM):** Tabla en Markdown con columnas: Tamiz (mm), % Retenido Parcial, % Retenido Acumulado y % Pasante Acumulado.\n"
+                    "5. **Parámetros Estadísticos:** Módulo de Finura (MF) y Tamaño Máximo Nominal (TMN).\n"
+                    "6. **Dictamen de Calidad y Uso Industrial:** Conclusión del Directorio para hormigones o filtración y sugerencias de planta."
                 )
 
-                max_intentos = 4
+                max_intentos = 3
                 for intento in range(max_intentos):
                     try:
                         response = client.models.generate_content(
@@ -526,7 +512,7 @@ def index():
                         break
                     except Exception as api_err:
                         if intento < max_intentos - 1:
-                            time.sleep(3 * (intento + 1))
+                            time.sleep(2)
                             continue
                         raise api_err
 
@@ -542,7 +528,7 @@ def index():
                     session.modified = True
 
             except Exception as e:
-                error = f"Error de conexión con la pasarela o servidores. La transferencia desde el celular excedió el tiempo o sufrió una interrupción de red: {str(e)}"
+                error = f"La pasarela o el servidor agotaron el tiempo de espera por restricciones de red móvil (Error 502/Timeout). Intente con una foto ligeramente más liviana o reintente en unos segundos: {str(e)}"
 
     return render_template_string(
         HTML_TEMPLATE, 
