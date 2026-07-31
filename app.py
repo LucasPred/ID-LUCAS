@@ -12,7 +12,7 @@ app.secret_key = "gravafilt_secret_key_2026_secure"
 
 api_key_val = os.environ.get("GEMINI_API_KEY")
 
-# Cliente con timeout robusto de 120 segundos
+# Cliente configurado con timeout robusto de 120 segundos
 client = genai.Client(
     api_key=api_key_val,
     http_options={'timeout': 120000} 
@@ -475,7 +475,7 @@ def index():
                 for intento in range(max_intentos):
                     try:
                         response = client.models.generate_content(
-                            model='gemini-2.5-flash',
+                            model='gemini-3.5-flash',
                             contents=[
                                 types.Part.from_bytes(
                                     data=image_bytes,
