@@ -1,12 +1,12 @@
 import os
 import time
+import base64
 from datetime import datetime
 from flask import Flask, render_template_string, request, session, redirect, url_for
 from google import genai
 from google.genai import types
 
 app = Flask(__name__)
-# Clave secreta fija para manejar la sesión de seguridad y el historial de reportes
 app.secret_key = "gravafilt_secret_key_2026_secure"
 
 # Inicialización segura del cliente con el SDK moderno
@@ -130,6 +130,13 @@ HTML_TEMPLATE = """
             color: #475569;
             font-weight: 500;
         }
+        .historial-img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+        }
     </style>
 </head>
 <body>
@@ -232,18 +239,29 @@ HTML_TEMPLATE = """
                     <div class="tab-pane fade" id="pills-historial" role="tabpanel">
                         <div class="card p-4 p-md-5">
                             <h3 class="text-dark fw-bold mb-3"><i class="fas fa-archive text-primary me-2"></i>Historial Resguardado de Ensayos</h3>
-                            <p class="text-muted small mb-4">Registro cronológico de todos los reportes analizados por el Directorio de GRAVAFILT S.A. mediante inteligencia artificial.</p>
+                            <p class="text-muted small mb-4">Registro cronológico permanente de todos los reportes, solicitudes e imágenes procesadas por el Directorio de GRAVAFILT S.A.</p>
                             
                             {% if historial and historial|length > 0 %}
                                 <div class="list-group">
                                     {% for item in historial %}
                                     <div class="list-group-item list-group-item-action flex-column align-items-start mb-3 rounded-3 shadow-sm border p-4">
-                                        <div class="d-flex w-100 justify-content-between align-items-center mb-2">
+                                        <div class="d-flex w-100 justify-content-between align-items-center mb-3 flex-wrap">
                                             <h5 class="mb-1 fw-bold text-dark"><i class="fas fa-clipboard-check text-success me-2"></i>Ensayo ID: #{{ loop.revindex }}</h5>
                                             <small class="text-muted fw-semibold"><i class="far fa-calendar-alt me-1"></i> {{ item.fecha }}</small>
                                         </div>
-                                        <div class="mb-2 text-secondary" style="font-size: 0.9rem; max-height: 120px; overflow: hidden; text-overflow: ellipsis;">
-                                            {{ item.resumen[:250] }}...
+                                        <div class="row align-items-center g-3">
+                                            <div class="col-auto">
+                                                {% if item.imagen %}
+                                                    <img src="data:image/jpeg;base64,{{ item.imagen }}" alt="Muestra analizada" class="historial-img shadow-sm" title="Imagen de muestra analizada">
+                                                {% else %}
+                                                    <div class="historial-img bg-light d-flex align-items-center justify-content-center text-muted small">Sin imagen</div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col">
+                                                <div class="text-secondary" style="font-size: 0.9rem; max-height: 100px; overflow: hidden; text-overflow: ellipsis;">
+                                                    {{ item.resumen[:300] }}...
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     {% endfor %}
@@ -401,7 +419,8 @@ def login():
         password = request.form.get("password")
         if username == "lsantiago" and password == "gravafil2026":
             session["authenticated"] = True
-            session["historial"] = []
+            if "historial" not in session:
+                session["historial"] = []
             return redirect(url_for("index"))
         else:
             error = "Credenciales incorrectas. Verifique usuario y contraseña."
@@ -410,7 +429,6 @@ def login():
 @app.route("/logout")
 def logout():
     session.pop("authenticated", None)
-    session.pop("historial", None)
     return redirect(url_for("login"))
 
 @app.route("/", methods=["GET", "POST"])
@@ -436,6 +454,8 @@ def index():
             else:
                 try:
                     image_bytes = file.read()
+                    # Codificar imagen en base64 para guardarla de forma persistente en la sesión como miniatura
+                    img_base64 = base64.b64encode(image_bytes).decode('utf-8')
                     
                     # Prompt técnico riguroso autosuficiente solicitado exactamente
                     prompt = (
@@ -475,11 +495,12 @@ def index():
                                 continue
                             raise api_err
 
-                    # Guardar en el historial de la sesión si se obtuvo resultado con éxito
+                    # Guardar en el historial resguardado de la sesión de manera acumulativa
                     if resultado:
                         nuevo_reporte = {
                             "fecha": timestamp_actual,
-                            "resumen": resultado
+                            "resumen": resultado,
+                            "imagen": img_base64
                         }
                         hist_actual = session.get("historial", [])
                         hist_actual.insert(0, nuevo_reporte)
