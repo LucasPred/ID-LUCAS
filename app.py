@@ -2,7 +2,6 @@ import os
 import time
 import base64
 from io import BytesIO
-from PIL import Image
 from datetime import datetime
 from flask import Flask, render_template_string, request, session, redirect, url_for
 from google import genai
@@ -452,21 +451,8 @@ def index():
             error = "No se ha seleccionado ningún archivo o imagen."
         else:
             try:
-                # COMPRESIÓN DE IMAGEN CON PILLOW: Evita archivos gigantescos que colapsen la API o den timeout 502
-                img = Image.open(file.stream)
-                img.verify()
-                
-                file.stream.seek(0)
-                img = Image.open(file.stream)
-                if img.mode != "RGB":
-                    img = img.convert("RGB")
-                
-                # Redimensionado inteligente a máximo 1280px para agilizar el tráfico con Gemini
-                img.thumbnail((1280, 1280))
-                
-                output_buffer = BytesIO()
-                img.save(output_buffer, format="JPEG", quality=85)
-                image_bytes = output_buffer.getvalue()
+                # Lectura directa en bytes utilizando herramientas nativas (sin requerir Pillow)
+                image_bytes = file.read()
                 img_base64 = base64.b64encode(image_bytes).decode('utf-8')
                 
                 prompt = (
@@ -488,7 +474,7 @@ def index():
                 for intento in range(max_intentos):
                     try:
                         response = client.models.generate_content(
-                            model='gemini-3.6-flash',
+                            model='gemini-2.5-flash',
                             contents=[
                                 types.Part.from_bytes(
                                     data=image_bytes,
