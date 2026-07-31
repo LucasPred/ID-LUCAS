@@ -5,13 +5,17 @@ from datetime import datetime
 from flask import Flask, render_template_string, request, session, redirect, url_for
 from google import genai
 from google.genai import types
+from google.genai.errors import APIError
 
 app = Flask(__name__)
 app.secret_key = "gravafilt_secret_key_2026_secure"
 
-# Inicialización segura del cliente con el SDK moderno
+# Inicialización segura del cliente con el SDK moderno y configuración de timeout extendido para evitar 502 Bad Gateway
 api_key_val = os.environ.get("GEMINI_API_KEY")
-client = genai.Client(api_key=api_key_val)
+client = genai.Client(
+    api_key=api_key_val,
+    http_options={'timeout': 60.0}  # Evita cortes por tiempo de espera en análisis de imágenes pesadas
+)
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -440,7 +444,6 @@ def index():
     error = None
     timestamp_actual = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-    # Inicializar historial en sesión si no existe
     if "historial" not in session:
         session["historial"] = []
 
@@ -454,10 +457,8 @@ def index():
             else:
                 try:
                     image_bytes = file.read()
-                    # Codificar imagen en base64 para guardarla de forma persistente en la sesión como miniatura
                     img_base64 = base64.b64encode(image_bytes).decode('utf-8')
                     
-                    # Prompt técnico riguroso autosuficiente solicitado exactamente
                     prompt = (
                         "Actúa con rigor absoluto como Ingeniero Geotécnico, Geólogo y Jefe de Control de Calidad de plantas de áridos (GRAVAFILT S.A.). "
                         "Analiza con extremo detalle técnico la fotografía provista de la muestra de material (arena o grava), contemplando que ante distintos materiales hay distintos análisis específicos de IA. "
@@ -473,7 +474,6 @@ def index():
                         "6. **Dictamen de Calidad, Operativa y Uso Industrial:** Conclusión técnica formal firmada por el Directorio sobre la aptitud del material para hormigones estructurales, construcción o filtración industrial, detallando las acciones correctivas o ajustes necesarios en la línea de clasificación de la planta."
                     )
 
-                    # Sistema de reintentos robusto usando el modelo estable 'gemini-3.6-flash'
                     max_intentos = 3
                     for intento in range(max_intentos):
                         try:
@@ -490,12 +490,12 @@ def index():
                             resultado = response.text
                             break
                         except Exception as api_err:
-                            if ("503" in str(api_err) or "429" in str(api_err) or "404" in str(api_err)) and intento < max_intentos - 1:
+                            # Captura reintentos para errores 502, 503, 429 o de red generales
+                            if intento < max_intentos - 1:
                                 time.sleep(3 * (intento + 1))
                                 continue
                             raise api_err
 
-                    # Guardar en el historial resguardado de la sesión de manera acumulativa
                     if resultado:
                         nuevo_reporte = {
                             "fecha": timestamp_actual,
@@ -508,7 +508,7 @@ def index():
                         session.modified = True
 
                 except Exception as e:
-                    error = f"Ocurrió un error en el procesamiento técnico (servidores ocupados o cuota, reintente en unos segundos): {str(e)}"
+                    error = f"Error temporal de pasarela o conexión con servidores (HTTP 502 / Timeout). Por favor, reintente en unos segundos: {str(e)}"
 
     return render_template_string(
         HTML_TEMPLATE, 
