@@ -6,14 +6,13 @@ from datetime import datetime
 from flask import Flask, render_template_string, request, session, redirect, url_for
 from google import genai
 from google.genai import types
-from google.genai import errors
 
 app = Flask(__name__)
 app.secret_key = "gravafilt_secret_key_2026_secure"
 
 api_key_val = os.environ.get("GEMINI_API_KEY")
 
-# Forzamos un timeout robusto de 120 segundos para evitar cortes prematuros al subir imágenes
+# Cliente con timeout robusto de 120 segundos
 client = genai.Client(
     api_key=api_key_val,
     http_options={'timeout': 120000} 
