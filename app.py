@@ -1,5 +1,6 @@
 import os
 import base64
+import time
 from datetime import datetime
 from flask import Flask, render_template_string, request, session, redirect, url_for, jsonify
 from google import genai
@@ -187,7 +188,7 @@ HTML_TEMPLATE = """
                             <div id="loadingOverlay">
                                 <div class="spinner-border text-primary mb-3" role="status" style="width: 3.5rem; height: 3.5rem;"></div>
                                 <h5 class="text-dark fw-bold">Procesando informe geológico institucional...</h5>
-                                <p class="text-muted small text-center px-3">Gemini IA está generando las tablas normativas IRAM/ASTM de forma segura. Por favor, aguarde unos segundos.</p>
+                                <p class="text-muted small text-center px-3">Gemini IA está generando las tablas normativas IRAM/ASTM de forma segura. Si hay alta demanda, el sistema reintentará automáticamente.</p>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
@@ -295,7 +296,7 @@ HTML_TEMPLATE = """
         </div>
     </div>
 
-    <!-- Script AJAX con control de errores JSON estricto (Evita HTML falso) -->
+    <!-- Script AJAX con control de errores JSON estricto -->
     <script>
         function enviarAsync(event) {
             event.preventDefault();
@@ -444,7 +445,6 @@ def index():
 
 @app.route("/analizar-ajax", methods=["POST"])
 def analizar_ajax():
-    # Control estricto de sesión en JSON puro (Jamás devuelve HTML de redirección)
     if not session.get("authenticated"):
         return jsonify({"error": "Su sesión ha caducado. Vuelva a iniciar sesión en la plataforma."}), 401
 
@@ -467,10 +467,27 @@ def analizar_ajax():
             "6. **Dictamen de Calidad, Operativa y Uso Industrial:** Conclusión formal del Directorio sobre su aplicación en hormigones, construcción o filtración, incluyendo sugerencias de ajuste en planta."
         )
 
-        response = client.models.generate_content(
-            model='gemini-3.5-flash',
-            contents=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"), prompt]
-        )
+        # Sistema de reintentos automáticos (Backoff) para evitar interrupciones por saturación 503
+        max_intentos = 3
+        reintentos_delay = 2
+        response = None
+
+        for intento in range(max_intentos):
+            try:
+                response = client.models.generate_content(
+                    model='gemini-3.6-flash',
+                    contents=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"), prompt]
+                )
+                break
+            except Exception as api_err:
+                err_str = str(api_err)
+                if ("503" in err_str or "UNAVAILABLE" in err_str) and intento < max_intentos - 1:
+                    time.sleep(reintentos_delay)
+                    reintentos_delay *= 2  # Incrementa la espera exponencialmente
+                    continue
+                else:
+                    raise api_err
+
         resultado = response.text
 
         nuevo_reporte = {"fecha": timestamp_actual, "resumen": resultado, "imagen": data.get('image_base64')}
@@ -486,7 +503,6 @@ def analizar_ajax():
         })
 
     except Exception as e:
-        # Captura cualquier excepción de la API o del servidor y la devuelve limpia en formato JSON
         return jsonify({"error": f"Fallo al procesar el ensayo geológico: {str(e)}"}), 500
 
 
