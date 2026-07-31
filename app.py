@@ -194,7 +194,7 @@ HTML_TEMPLATE = """
                             <div id="loadingOverlay">
                                 <div class="spinner-border text-primary mb-3" role="status" style="width: 3.5rem; height: 3.5rem;"></div>
                                 <h5 class="text-dark fw-bold">Generando informe geológico exhaustivo...</h5>
-                                <p class="text-muted small text-center px-3">Gemini IA está procesando la caracterización detallada y las tablas IRAM/ASTM en segundo plano sin cortes de Cloudflare.</p>
+                                <p class="text-muted small text-center px-3">Gemini IA está procesando la caracterización detallada y las tablas IRAM/ASTM en segundo plano sin cortes.</p>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
@@ -211,7 +211,7 @@ HTML_TEMPLATE = """
                                         Seleccionar Archivo o Capturar con Cámara:
                                     </label>
                                     <input class="form-control form-control-lg mx-auto" type="file" id="fileInput" accept="image/*" capture="environment" required style="max-width: 500px;">
-                                    <div class="form-text text-muted mt-2">Formatos admitidos: JPG, PNG, WEBP (Optimización automática en cliente para evitar saturación).</div>
+                                    <div class="form-text text-muted mt-2">Formatos admitidos: JPG, PNG, WEBP (Optimización automática en cliente).</div>
                                 </div>
                                 <div class="d-grid">
                                     <button type="submit" id="btnAnalizar" class="btn btn-custom btn-lg text-white">
@@ -305,7 +305,7 @@ HTML_TEMPLATE = """
         </div>
     </div>
 
-    <!-- Script de comunicación asíncrona AJAX para evitar límite de Cloudflare -->
+    <!-- Script AJAX robusto con control automático de sesión -->
     <script>
         function enviarAsync(event) {
             event.preventDefault();
@@ -345,8 +345,16 @@ HTML_TEMPLATE = """
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ image_base64: base64Data })
                     })
-                    .then(response => response.json())
+                    .then(async response => {
+                        const contentType = response.headers.get("content-type");
+                        if (contentType && contentType.indexOf("application/json") !== -1) {
+                            return response.json();
+                        } else {
+                            window.location.href = '/login';
+                        }
+                    })
                     .then(data => {
+                        if (!data) return;
                         document.getElementById('loadingOverlay').style.display = 'none';
                         document.getElementById('btnAnalizar').disabled = false;
 
