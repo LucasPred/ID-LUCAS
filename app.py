@@ -32,7 +32,6 @@ HTML_TEMPLATE = """
     <!-- FontAwesome Icons CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* Estilos generales y diseño corporativo de GRAVAFILT S.A. */
         body {
             background-color: #f1f5f9;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -199,7 +198,7 @@ HTML_TEMPLATE = """
 
                             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
                                 <h2 class="text-dark fw-bold fs-3 fs-md-2 mb-2 mb-md-0">Laboratorio Geológico Automatizado</h2>
-                                <span class="badge bg-success text-white px-3 py-2 rounded-pill"><i class="fas fa-check-circle me-1"></i> Sistema Blindado Anti-502</span>
+                                <span class="badge bg-success text-white px-3 py-2 rounded-pill"><i class="fas fa-check-circle me-1"></i> Sistema Blindado Anti-Errores</span>
                             </div>
                             <p class="text-muted mb-4 small">Capture la fotografía con su dispositivo móvil o cargue la muestra de árido para iniciar el protocolo técnico completo de GRAVAFILT S.A.</p>
 
@@ -480,7 +479,7 @@ def analizar_ajax():
         )
 
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.6-flash',
             contents=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"), prompt]
         )
         resultado = response.text
