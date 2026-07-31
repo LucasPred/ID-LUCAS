@@ -190,7 +190,7 @@ HTML_TEMPLATE = """
                                 <h2 class="text-dark fw-bold fs-3 fs-md-2 mb-2 mb-md-0">Laboratorio Geológico Automatizado</h2>
                                 <span class="badge bg-success text-white px-3 py-2 rounded-pill"><i class="fas fa-check-circle me-1"></i> Sistema Operativo Cloud Conectado</span>
                             </div>
-                            <p class="text-muted mb-4 small fs-md-6">Plataforma corporativa exclusiva para validación de extracciones de río y procesamiento industrial de arenas y gravas. Suba un archivo de archivo o active directamente la cámara de su dispositivo móvil o tablet.</p>
+                            <p class="text-muted mb-4 small fs-md-6">Plataforma corporativa exclusiva para validación de extracciones de río y procesamiento industrial de arenas y gravas. Suba un archivo o active directamente la cámara de su dispositivo móvil o tablet.</p>
 
                             <form method="POST" enctype="multipart/form-data" onsubmit="mostrarCarga(event)">
                                 <div class="mb-4 preview-container">
@@ -453,12 +453,12 @@ def index():
                         "6. **Dictamen de Calidad, Operativa y Uso Industrial:** Conclusión técnica formal firmada por el Directorio sobre la aptitud del material para hormigones estructurales, construcción o filtración industrial, detallando las acciones correctivas o ajustes necesarios en la línea de clasificación de la planta."
                     )
 
-                    # Sistema de reintentos automáticos robusto optimizado para Cloud
+                    # Sistema de reintentos con el modelo actual y estable 'gemini-2.5-flash'
                     max_intentos = 3
                     for intento in range(max_intentos):
                         try:
                             response = client.models.generate_content(
-                                model='gemini-2.0-flash',
+                                model='gemini-2.5-flash',
                                 contents=[
                                     types.Part.from_bytes(
                                         data=image_bytes,
@@ -470,7 +470,7 @@ def index():
                             resultado = response.text
                             break
                         except Exception as api_err:
-                            if ("503" in str(api_err) or "429" in str(api_err)) and intento < max_intentos - 1:
+                            if ("503" in str(api_err) or "429" in str(api_err) or "404" in str(api_err)) and intento < max_intentos - 1:
                                 time.sleep(3 * (intento + 1))
                                 continue
                             raise api_err
@@ -481,7 +481,6 @@ def index():
                             "fecha": timestamp_actual,
                             "resumen": resultado
                         }
-                        # Modificar la lista en sesión de manera segura para Flask
                         hist_actual = session.get("historial", [])
                         hist_actual.insert(0, nuevo_reporte)
                         session["historial"] = hist_actual
